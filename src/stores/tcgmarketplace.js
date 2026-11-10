@@ -44,21 +44,29 @@ async function mtgCategoryId() {
   return cachedCategoryId;
 }
 
+const first = (r, keys) => {
+  for (const k of keys) if (r[k] !== undefined && r[k] !== null && r[k] !== '') return r[k];
+  return undefined;
+};
+
 function parseResults(rows, cardName) {
   const out = [];
   for (const r of Array.isArray(rows) ? rows : []) {
-    if (!r || !r.card_name || r.name === 'No results') continue;
-    if (!titleMatchesCard(r.card_name, cardName)) continue;
-    const price = toNumber(r.lowest_price) ?? toNumber(r.highest_price);
+    if (!r || r.name === 'No results') continue;
+    const title = first(r, ['card_name', 'name', 'crd_name', 'title']);
+    if (!title || !titleMatchesCard(title, cardName)) continue;
+    const price = toNumber(first(r, ['lowest_price', 'min_price', 'price', 'selling_price', 'highest_price']));
     if (!price) continue;
-    const stock = Number(r.qty || 0);
-    const foil = r.crd_foil_type || (String(r.crd_foil || '').match(/^(1|true|yes|foil)$/i) ? 'Foil' : '');
+    const stock = Number(first(r, ['qty', 'quantity', 'total_qty', 'stock']) || 0);
+    const foilRaw = first(r, ['crd_foil_type', 'foil_type', 'crd_foil', 'foil', 'is_foil']);
+    const foil = foilRaw === undefined ? '' : String(foilRaw);
+    const isFoil = /^(1|true|yes)$/i.test(foil) || (/foil/i.test(foil) && !/non/i.test(foil));
     out.push({
-      title: r.card_name,
-      set: r.set_name || '',
-      setCode: r.setcode || r.set_code || '',
-      condition: normalizeCondition(r.crd_condition || ''),
-      finish: foil && !/non/i.test(foil) ? 'foil' : 'nonfoil',
+      title,
+      set: first(r, ['set_name', 'expansion_name', 'setname']) || '',
+      setCode: first(r, ['setcode', 'set_code']) || '',
+      condition: normalizeCondition(first(r, ['crd_condition', 'condition']) || ''),
+      finish: isFoil ? 'foil' : 'nonfoil',
       price,
       stock,
       inStock: stock > 0,
@@ -70,16 +78,33 @@ function parseResults(rows, cardName) {
   return out;
 }
 
-async function search(cardName) {
-  const categoryId = await mtgCategoryId();
-  const body = JSON.stringify({ category_id: categoryId, name: cardName, page: 1, item: 100 });
-  const res = await getJson(new URL('product/filter', API).toString(), {
+async function post(path, payload) {
+  const res = await getJson(new URL(path, API).toString(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: SITE, Referer: `${SITE}/` },
-    body,
+    body: JSON.stringify(payload),
   });
   if (res && res.status && Number(res.status) !== 200) throw new Error(res.message || `API status ${res.status}`);
-  return parseResults(res?.data?.data ?? [], cardName);
+  const rows = res?.data?.data ?? res?.data ?? [];
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function search(cardName) {
+  const categoryId = await mtgCategoryId();
+  // Same request as the site's search results page ("product/filter" only feeds the
+  // suggestion dropdown and has no prices).
+  const rows = await post('product/advancedfilter', {
+    category_id: categoryId,
+    name_exact_match: true,
+    available_only: false,
+    name: cardName,
+  });
+  const listings = parseResults(rows, cardName);
+  if (rows.length && !listings.length) {
+    // Shows up in the server logs if the API's row format ever changes.
+    console.warn(`[tcgmarketplace] ${rows.length} rows for "${cardName}" but none parsed; first row keys: ${Object.keys(rows[0] || {}).join(', ')}`);
+  }
+  return listings;
 }
 
 module.exports = {
