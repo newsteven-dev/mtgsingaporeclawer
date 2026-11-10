@@ -167,6 +167,7 @@ tr:last-child td { border-bottom: 0; }
 #h-table { margin-top: 4px; max-height: 320px; overflow: auto; }
 
 .ck-headline { margin: 0 0 10px; }
+.pager { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
 .ck-headline strong { font-variant-numeric: tabular-nums; }
 #ck-table td.title { min-width: 200px; }
 #ck-table .usd { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
