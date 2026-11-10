@@ -156,3 +156,22 @@ test('card kingdom keeps retail price and stock per condition', () => {
   // Older lists without condition_values fall back to the retail price as NM.
   assert.deepEqual(ck._slim({ name: 'X', price_retail: '5', qty_retail: 2 }).conds, [[5, 2], null, null, null]);
 });
+
+test('tcg marketplace parser reads the live advancedfilter row format', () => {
+  // Shape seen from the live API on 2026-11-10.
+  const rows = tcg._parseResults(
+    [
+      { id: 920632, name: ' [FCA] Lightning Bolt', setcode: 'fca', setname: 'Final Fantasy: Through the Ages', crd_foil_type: null, rarity: 'Uncommon', available: 43, from: '1.40' },
+      { id: 5, name: ' [STA] Lightning Bolt', setcode: 'sta', setname: 'Strixhaven Mystical Archive', crd_foil_type: 'Etched Foil', available: 0, from: '6.00' },
+      { id: 6, name: ' [2X2] Chain Lightning', setcode: '2x2', setname: 'Double Masters 2022', available: 3, from: '2.00' },
+    ],
+    'Lightning Bolt',
+  );
+  assert.equal(rows.length, 2);
+  assert.deepEqual(
+    { title: rows[0].title, set: rows[0].set, setCode: rows[0].setCode, price: rows[0].price, stock: rows[0].stock, inStock: rows[0].inStock, finish: rows[0].finish },
+    { title: 'Lightning Bolt', set: 'Final Fantasy: Through the Ages', setCode: 'FCA', price: 1.4, stock: 43, inStock: true, finish: 'nonfoil' },
+  );
+  assert.equal(rows[1].finish, 'foil');
+  assert.equal(rows[1].inStock, false);
+});

@@ -55,18 +55,19 @@ function parseResults(rows, cardName) {
   const out = [];
   for (const r of Array.isArray(rows) ? rows : []) {
     if (!r || r.name === 'No results') continue;
-    const title = first(r, ['card_name', 'name', 'crd_name', 'title']);
+    // Names come back as " [FCA] Lightning Bolt": drop the leading set-code tag.
+    const title = String(first(r, ['card_name', 'name', 'crd_name', 'title']) || '').replace(/^\s*\[[^\]]*\]\s*/, '').trim();
     if (!title || !titleMatchesCard(title, cardName)) continue;
-    const price = toNumber(first(r, ['lowest_price', 'min_price', 'price', 'selling_price', 'highest_price']));
+    const price = toNumber(first(r, ['from', 'lowest_price', 'min_price', 'price', 'selling_price', 'highest_price']));
     if (!price) continue;
-    const stock = Number(first(r, ['qty', 'quantity', 'total_qty', 'stock']) || 0);
+    const stock = Number(first(r, ['available', 'qty', 'quantity', 'total_qty', 'stock']) || 0);
     const foilRaw = first(r, ['crd_foil_type', 'foil_type', 'crd_foil', 'foil', 'is_foil']);
     const foil = foilRaw === undefined ? '' : String(foilRaw);
     const isFoil = /^(1|true|yes)$/i.test(foil) || (/foil/i.test(foil) && !/non/i.test(foil));
     out.push({
       title,
       set: first(r, ['set_name', 'expansion_name', 'setname']) || '',
-      setCode: first(r, ['setcode', 'set_code']) || '',
+      setCode: String(first(r, ['setcode', 'set_code']) || '').toUpperCase(),
       condition: normalizeCondition(first(r, ['crd_condition', 'condition']) || ''),
       finish: isFoil ? 'foil' : 'nonfoil',
       price,
@@ -102,17 +103,16 @@ async function search(cardName) {
     name: cardName,
   });
   const listings = parseResults(rows, cardName);
-  // Temporary diagnostics so the live site shows why a search comes back empty
-  // (this API isn't reachable from every network). Public listing data only.
-  listings.diagnostics = {
-    rows: rows.length,
-    categoryId,
-    categories: categoriesSeen,
-    firstRowKeys: Object.keys(rows[0] || {}),
-    firstRow: rows[0] ? Object.fromEntries(Object.entries(rows[0]).slice(0, 25).map(([k, v]) => [k, typeof v === 'string' ? v.slice(0, 80) : v])) : null,
-  };
   if (rows.length && !listings.length) {
-    // Shows up in the server logs if the API's row format ever changes.
+    // The API answered but nothing could be read: report the row format (public listing
+    // data only) in the response and the server log, so a format change is easy to spot.
+    listings.diagnostics = {
+      rows: rows.length,
+      categoryId,
+      categories: categoriesSeen,
+      firstRowKeys: Object.keys(rows[0] || {}),
+      firstRow: Object.fromEntries(Object.entries(rows[0] || {}).slice(0, 25).map(([k, v]) => [k, typeof v === 'string' ? v.slice(0, 80) : v])),
+    };
     console.warn(`[tcgmarketplace] ${rows.length} rows for "${cardName}" but none parsed; first row keys: ${Object.keys(rows[0] || {}).join(', ')}`);
   }
   return listings;
