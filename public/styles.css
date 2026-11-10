@@ -240,3 +240,32 @@ code { font-size: 13px; }
   .search button { padding: 12px; }
   .card-head img { width: 110px; }
 }
+
+/* Top searches: ranked horizontal bars (single measure, one hue) */
+:root { --bar: #2a78d6; }
+@media (prefers-color-scheme: dark) { :root { --bar: #3987e5; } }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.seg-btn { background: transparent; color: var(--text); border-radius: 0; padding: 6px 12px; font-weight: 500; font-size: 14px; }
+.seg-btn + .seg-btn { border-left: 1px solid var(--border); }
+.seg-btn[aria-pressed="true"] { background: var(--text); color: var(--surface); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#top-start { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); max-width: 100%; }
+.bars { display: flex; flex-direction: column; gap: 2px; }
+.bar-row {
+  display: grid; grid-template-columns: 24px minmax(120px, 240px) 1fr 40px; align-items: center; gap: 10px;
+  padding: 5px 6px; border-radius: 8px; color: var(--text); text-decoration: none;
+}
+.bar-row:hover, .bar-row:focus-visible { background: var(--hover); outline: none; }
+.bar-rank { color: var(--muted); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.bar-name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { height: 14px; display: block; }
+.bar-fill { display: block; height: 100%; background: var(--bar); border-radius: 0 4px 4px 0; }
+.bar-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#top-table { margin-top: 4px; }
+@media (max-width: 600px) {
+  .bar-row { grid-template-columns: 18px minmax(0, 1fr) 32px; grid-template-rows: auto auto; row-gap: 4px; }
+  .bar-rank { grid-row: 1 / span 2; }
+  .bar-name { grid-column: 2; }
+  .bar-value { grid-column: 3; grid-row: 1; text-align: right; }
+  .bar-track { grid-column: 2 / span 2; grid-row: 2; }
+}

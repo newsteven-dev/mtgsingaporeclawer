@@ -29,6 +29,24 @@
     <div id="content" hidden>
       <div class="stats" id="stats"></div>
 
+      <section id="top">
+        <div class="filters">
+          <h3>Top searches <span class="muted small" id="top-sub"></span></h3>
+          <div class="seg" role="group" aria-label="Group by">
+            <button type="button" class="seg-btn" data-period="day" aria-pressed="true">Per day</button>
+            <button type="button" class="seg-btn" data-period="month" aria-pressed="false">Per month</button>
+          </div>
+          <label><span class="sr-only">Period</span><select id="top-start"></select></label>
+          <button type="button" id="top-view" class="ghost" aria-pressed="false">Show table</button>
+        </div>
+        <div class="chart-card">
+          <div id="top-chart" class="bars" role="list" aria-label="Most searched cards"></div>
+          <div id="top-table" class="table-wrap" hidden></div>
+          <div id="top-tip" class="tip" hidden></div>
+          <p id="top-note" class="muted small"></p>
+        </div>
+      </section>
+
       <section>
         <div class="filters">
           <h3>Cards</h3>

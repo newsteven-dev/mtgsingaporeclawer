@@ -72,12 +72,15 @@ Results are cached for 10 minutes, so a card searched repeatedly is saved at mos
 `/login.html` signs you in with your GitHub account (through Supabase Auth). Once signed in,
 `/searches.html` shows every search captured so far: a list of cards tracked, and a search log where
 each row expands to show what every store had at that moment (in-stock count, cheapest prices and listings).
+**Top searches** ranks the 20 most searched cards per day or per month, as a bar chart or a table.
 The main page has no visible sign-in button: go to `/login.html` directly. Once you are signed in, the top-right corner
 shows **Captured searches** and **Log out**, and the main page also shows **Recently tracked cards** and each card's
 **Price history**. Signed out, those stay hidden (the server refuses that data without a valid sign-in), while the live
 price comparison keeps working for everyone.
 
-Only GitHub accounts listed in `ADMIN_GITHUB_USERS` (default `newsteven-dev`) can see this data. The server
+Only the GitHub accounts whose **verified email** is listed in `ADMIN_EMAILS` can see this data. If `ADMIN_EMAILS`
+is empty, the GitHub usernames in `ADMIN_GITHUB_USERS` (default `newsteven-dev`) decide instead. Set `ADMIN_EMAILS`
+in the Render dashboard (**Environment** tab) rather than in the repo, so the address isn't published. The server
 checks every request with Supabase, so another GitHub user who signs in just sees "not allowed".
 
 ### One-time setup
@@ -138,6 +141,7 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/trending` | Recently tracked cards with price change vs 7 days ago (signed-in allowlisted user only) |
 | `GET /api/config` | Public sign-in settings (Supabase URL and publishable key) |
 | `GET /api/admin/searches?q=&limit=&offset=` | Captured searches and cards (signed-in allowlisted user only) |
+| `GET /api/admin/top?period=day\|month&start=YYYY-MM-DD` | Top 20 searched cards for a day or month (signed-in allowlisted user only) |
 | `GET /api/admin/snapshots?ids=1,2` | Store snapshots and listings for one search (signed-in allowlisted user only) |
 
 Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`.
@@ -150,7 +154,8 @@ Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`.
 | `SUPABASE_URL` | none | Supabase project URL (turns on price history) |
 | `SUPABASE_SECRET_KEY` | none | Supabase secret or service_role key, server only |
 | `SUPABASE_PUBLISHABLE_KEY` | none | Supabase publishable key, used by the GitHub sign-in page |
-| `ADMIN_GITHUB_USERS` | `newsteven-dev` | GitHub usernames allowed to see captured searches (comma-separated) |
+| `ADMIN_EMAILS` | none | Verified GitHub emails allowed to see captured searches (comma-separated); when set, decides access |
+| `ADMIN_GITHUB_USERS` | `newsteven-dev` | GitHub usernames allowed to see captured searches, used only when `ADMIN_EMAILS` is empty |
 | `CACHE_MINUTES` | `10` | How long price results are cached |
 | `SEARCHES_PER_10_MIN` | `40` | Card searches allowed per visitor every 10 minutes |
 | `USD_SGD_RATE` | daily rate | Fixed USD to SGD rate for Card Kingdom prices |
