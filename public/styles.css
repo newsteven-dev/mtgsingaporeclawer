@@ -119,6 +119,8 @@ tr:last-child td { border-bottom: 0; }
   --series-moxandlotus: #1baf7a;
   --series-tcgmarketplace: #eda100;
   --series-greyogre: #e87ba4;
+  --series-flagship: #008300;
+  --series-gameshaven: #6250d6;
   --grid: #ebe8e1;
 }
 @media (prefers-color-scheme: dark) {
@@ -128,6 +130,8 @@ tr:last-child td { border-bottom: 0; }
     --series-moxandlotus: #199e70;
     --series-tcgmarketplace: #c98500;
     --series-greyogre: #d55181;
+    --series-flagship: #008300;
+    --series-gameshaven: #9085e9;
     --grid: #2c2a27;
   }
 }

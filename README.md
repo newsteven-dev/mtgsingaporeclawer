@@ -1,6 +1,6 @@
 # MTG SG Price Compare
 
-Type a Magic: The Gathering card name and compare its singles prices across five Singapore stores:
+Type a Magic: The Gathering card name and compare its singles prices across seven Singapore stores:
 
 | Store | How prices are read |
 | --- | --- |
@@ -9,6 +9,8 @@ Type a Magic: The Gathering card name and compare its singles prices across five
 | [Mox & Lotus](https://moxandlotus.sg/) | The storefront's JSON product search (`/api/products?search=`) |
 | [The TCG Marketplace](https://thetcgmarketplace.com/) | The storefront's product filter API (`:3501/product/filter`), lowest seller price |
 | [Grey Ogre Games](https://www.greyogregames.com/) | Shopify search results (`title:"<card>"`), per-condition variants |
+| [Flagship Games](https://www.flagshipgames.sg/) | Shopify search for in-stock products, then each product's Shopify JSON for per-condition prices (stock counts aren't published) |
+| [Games Haven](https://www.gameshaventcg.com/) | Same BinderPOS storefront as Grey Ogre: search results with per-condition prices and stock |
 
 Card-name autocomplete and card details (image, type line, USD reference price) come from the
 [Scryfall API](https://scryfall.com/docs/api). Every card also links to its
@@ -144,7 +146,10 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/admin/top?period=day\|month&start=YYYY-MM-DD` | Top 20 searched cards for a day or month (signed-in allowlisted user only) |
 | `GET /api/admin/snapshots?ids=1,2` | Store snapshots and listings for one search (signed-in allowlisted user only) |
 
-Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`.
+Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`, `flagship`, `gameshaven`.
+
+The **Cheapest per store** boxes are ordered by price: the store with the cheapest in-stock copy comes first,
+then stores still loading, then stores with nothing in stock or that couldn't be reached.
 
 ### Configuration (environment variables)
 

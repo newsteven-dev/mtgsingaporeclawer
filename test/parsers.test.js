@@ -175,3 +175,35 @@ test('tcg marketplace parser reads the live advancedfilter row format', () => {
   assert.equal(rows[1].finish, 'foil');
   assert.equal(rows[1].inStock, false);
 });
+
+test('binderpos stores build product links on their own site and spot the bot check', () => {
+  const { isBotCheck } = require('../src/stores/binderpos');
+  const gh = require('../src/stores/gameshaven');
+  const html = `<div class="productCard__card" data-productType="MTG Single">
+    <a href="/products/sol-ring-commander-2020?_pos=1" class="productCard__a"><img data-src="//cdn/x.jpg" alt="Sol Ring [Commander 2020]" class="productCard__img"></a>
+    <ul><li class="productChip" data-variantAvailable="true" data-variantQty="16" data-variantPrice="247" data-variantTitle="Near Mint"></li></ul></div>`;
+  const { products } = gh._parsePage(html);
+  assert.equal(products[0].url, 'https://www.gameshaventcg.com/products/sol-ring-commander-2020');
+  assert.equal(greyogre._parsePage(html).products[0].url, 'https://www.greyogregames.com/products/sol-ring-commander-2020');
+  assert.ok(isBotCheck('<title>Verifying your connection...</title>'));
+  assert.ok(!isBotCheck(html));
+});
+
+test('flagship reads handles from search results and conditions from product JSON', () => {
+  const flagship = require('../src/stores/flagship');
+  const { products } = flagship._parseSearchPage(`
+    <a href="/products/lightning-bolt-fourth-edition?_pos=1"><img alt="Lightning Bolt [Fourth Edition]"></a>
+    <a href="/products/lightning-bolt-fourth-edition?_pos=1"><div class="h4 grid-view-item__title">Lightning Bolt [Fourth Edition]</div></a>
+    <a href="/search?page=2&q=x">2</a>`);
+  assert.deepEqual(products, [{ handle: 'lightning-bolt-fourth-edition', title: 'Lightning Bolt [Fourth Edition]' }]);
+  const rows = flagship._parseProduct({
+    handle: 'lightning-bolt-fourth-edition', title: 'Lightning Bolt [Fourth Edition]', type: 'MTG Single', featured_image: '//cdn/x.jpg',
+    variants: [{ title: 'Near Mint', price: 300, available: false }, { title: 'Moderately Played', price: 200, available: true }],
+  });
+  assert.equal(rows.length, 2);
+  assert.deepEqual(
+    { set: rows[1].set, condition: rows[1].condition, price: rows[1].price, inStock: rows[1].inStock, stock: rows[1].stock, url: rows[1].url },
+    { set: 'Fourth Edition', condition: 'MP', price: 2, inStock: true, stock: null, url: 'https://www.flagshipgames.sg/products/lightning-bolt-fourth-edition' },
+  );
+  assert.deepEqual(flagship._parseProduct({ type: 'Booster Box', variants: [{ price: 100 }] }), []);
+});

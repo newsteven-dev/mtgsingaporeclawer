@@ -545,7 +545,19 @@
     }
     const bestPrice = Math.min(...Object.values(cheapest).filter(Boolean).map((l) => l.price));
 
-    $('#summary').innerHTML = stores
+    const rank = (s) => {
+      const r = results[s.id] || {};
+      if (r.status === 'ok' && cheapest[s.id]) return [0, cheapest[s.id].price];
+      if (r.status === 'loading') return [1, 0];
+      if (r.status === 'ok') return [2, 0];
+      return [3, 0];
+    };
+    const ordered = stores
+      .map((s, i) => ({ s, i, k: rank(s) }))
+      .sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1] || a.i - b.i)
+      .map((x) => x.s);
+
+    $('#summary').innerHTML = ordered
       .map((s) => {
         const r = results[s.id] || {};
         if (r.status === 'loading') {
@@ -590,7 +602,7 @@
             <td class="title">${esc(l.title)}<span class="set">${esc([l.set, l.setCode && l.setCode !== l.set ? l.setCode : ''].filter(Boolean).join(' · '))}</span></td>
             <td>${esc(l.condition || '—')}</td>
             <td>${l.finish === 'foil' ? '<span class="foil">Foil</span>' : 'Non-foil'}</td>
-            <td>${l.inStock ? esc(l.stock) : 'Out'}</td>
+            <td>${l.inStock ? (l.stock != null ? esc(l.stock) : 'In stock') : 'Out'}</td>
             <td><a href="${esc(l.url)}" target="_blank" rel="noopener">View ↗</a></td>
           </tr>`,
           )
