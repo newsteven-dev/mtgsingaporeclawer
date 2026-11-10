@@ -623,12 +623,63 @@
   });
   $('#refresh').addEventListener('click', () => currentCard && compare(currentCard.name || input.value.trim(), { refresh: true }));
 
+  /* ---------------- Top 5 in the newest set (Scryfall, TCGplayer prices) ---------------- */
+
+  let latestRank = 'price';
+
+  async function loadLatest() {
+    const rank = latestRank;
+    try {
+      const res = await fetch(`/api/latest-set?rank=${rank}`);
+      const d = await res.json();
+      if (rank !== latestRank) return;
+      if (!res.ok || !d.cards || !d.cards.length) return ($('#latest').hidden = true);
+      $('#latest-set').textContent = d.set.name;
+      $('#latest-list').innerHTML = d.cards
+        .map(
+          (c) => `<li class="latest-card">
+            <button type="button" class="latest-pick" data-card="${esc(c.name)}" title="Compare ${esc(c.name)} across the Singapore stores">
+              ${c.image ? `<img src="${esc(c.image)}" alt="" loading="lazy" width="48" height="67" />` : ''}
+              <span class="latest-text">
+                <span class="latest-name"><span class="latest-rank-n">${c.rank}</span> ${esc(c.name)}</span>
+                <span class="latest-price">${c.sgd != null ? `≈ ${money(c.sgd)}` : ''} <span class="muted">${c.usd != null ? `US$${Number(c.usd).toFixed(2)}${c.foilOnly ? ' foil' : ''}` : ''}</span></span>
+                ${rank === 'played' && c.edhrecRank ? `<span class="muted small">EDHREC #${esc(c.edhrecRank)}</span>` : ''}
+              </span>
+            </button>
+            <a class="latest-tcg small" href="${esc(c.tcgplayerUrl)}" target="_blank" rel="noopener">TCGplayer ↗</a>
+          </li>`,
+        )
+        .join('');
+      $('#latest-note').textContent =
+        (rank === 'played'
+          ? 'Most played: ranked by EDHREC (how many Commander decks play the card). '
+          : 'By price: highest TCGplayer market price. ') +
+        `Prices are TCGplayer market prices in USD via Scryfall${d.usdSgd ? `, about S$${Number(d.usdSgd).toFixed(2)} per US$1` : ''}. Click a card to compare it in Singapore.`;
+      $('#latest').hidden = false;
+    } catch (err) {
+      console.warn('latest set failed', err);
+    }
+  }
+
+  document.querySelectorAll('.latest-rank').forEach((b) =>
+    b.addEventListener('click', () => {
+      latestRank = b.dataset.rank;
+      document.querySelectorAll('.latest-rank').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      loadLatest();
+    }),
+  );
+  $('#latest-list').addEventListener('click', (e) => {
+    const b = e.target.closest('.latest-pick');
+    if (b) choose(b.dataset.card);
+  });
+
   /* ---------------- Boot ---------------- */
 
   fetch('/api/stores')
     .then((r) => r.json())
     .then((s) => {
       stores = s;
+      loadLatest();
       loadTrending();
       const initial = new URLSearchParams(location.search).get('card');
       if (initial) choose(initial);

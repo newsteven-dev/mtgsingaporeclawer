@@ -237,4 +237,4 @@ async function sellPrices(cardName) {
   };
 }
 
-module.exports = { sellPrices, ensureLoaded, _createRecordScanner: createRecordScanner, _slim: slim };
+module.exports = { sellPrices, ensureLoaded, usdToSgd, _createRecordScanner: createRecordScanner, _slim: slim };

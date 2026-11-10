@@ -30,6 +30,20 @@ npm start
 
 Then open http://localhost:3000. Add `?card=Lightning%20Bolt` to the URL to link straight to a card.
 
+## Top 5 in the newest set
+
+Under the search bar, the main page shows the top 5 cards of the newest Magic set (the most recent paper
+expansion or core set on Scryfall), with a switch between:
+
+- **By price**: highest TCGplayer market price.
+- **Most played**: lowest EDHREC rank, i.e. played in the most Commander decks.
+
+Prices are TCGplayer market prices in USD, which Scryfall publishes, shown with an S$ estimate. Click a card to compare
+it across the Singapore stores, or follow its TCGplayer link. Results are cached for 6 hours.
+
+TCGplayer's own "trending" list isn't used: it's only available from TCGplayer's internal site API, which isn't
+meant for other apps, and TCGplayer's public API is closed to new developers.
+
 ## Card Kingdom prices
 
 Each card page also shows what [Card Kingdom](https://www.cardkingdom.com/) **sells** every version of the card for
@@ -138,6 +152,7 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/autocomplete?q=bolt` | Card-name suggestions (Scryfall) |
 | `GET /api/card?name=Lightning%20Bolt` | Card details (Scryfall) |
 | `GET /api/prices?store=agora&name=Lightning%20Bolt[&refresh=1]` | Listings at one store (fresh results are saved to Supabase) |
+| `GET /api/latest-set?rank=price\|played` | Top 5 cards of the newest set (Scryfall, TCGplayer prices) |
 | `GET /api/cardkingdom?name=Lightning%20Bolt` | Card Kingdom retail prices and stock for every version and condition |
 | `GET /api/history?name=Lightning%20Bolt&days=90` | Daily cheapest price per store (signed-in allowlisted user only) |
 | `GET /api/trending` | Recently tracked cards with price change vs 7 days ago (signed-in allowlisted user only) |

@@ -14,6 +14,7 @@ const scryfall = require('./scryfall');
 const db = require('./db');
 const cardkingdom = require('./cardkingdom');
 const auth = require('./auth');
+const latestset = require('./latestset');
 const { TtlCache } = require('./util');
 
 const PORT = Number(process.env.PORT || 3000);
@@ -90,6 +91,15 @@ app.get('/api/history', auth.requireAdmin, async (req, res) => {
     res.json({ enabled: true, days: await db.history(name, days) });
   } catch (err) {
     res.status(502).json({ enabled: true, days: [], error: err.message });
+  }
+});
+
+/** Top 5 cards of the newest set: GET /api/latest-set?rank=price|played (public, cached 6 hours). */
+app.get('/api/latest-set', async (req, res) => {
+  try {
+    res.json(await latestset.topCards(req.query.rank === 'played' ? 'played' : 'price'));
+  } catch (err) {
+    res.status(502).json({ error: err.message, cards: [] });
   }
 });
 

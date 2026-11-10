@@ -29,6 +29,17 @@
         </div>
       </form>
       <p class="hint">Card names are suggested by <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>.</p>
+      <section id="latest" class="latest" hidden aria-labelledby="latest-title">
+        <div class="latest-head">
+          <h3 id="latest-title">Top 5 in <span id="latest-set"></span></h3>
+          <div class="seg" role="group" aria-label="Rank by">
+            <button type="button" class="seg-btn latest-rank" data-rank="price" aria-pressed="true">By price</button>
+            <button type="button" class="seg-btn latest-rank" data-rank="played" aria-pressed="false">Most played</button>
+          </div>
+        </div>
+        <ol id="latest-list" class="latest-list"></ol>
+        <p id="latest-note" class="muted small"></p>
+      </section>
       <section id="trending" class="trending" hidden>
         <h3>Recently tracked cards</h3>
         <ul id="trending-list"></ul>
