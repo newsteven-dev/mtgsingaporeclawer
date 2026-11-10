@@ -1,20 +1,25 @@
 'use strict';
 
 /**
- * Card Kingdom buylist (what CK pays you for a card), per printing.
+ * Card Kingdom retail prices (what CK sells a card for), per printing and condition.
  *
- * CK publishes its full price list once a day at api.cardkingdom.com/api/pricelist
- * (~48 MB JSON, ~150k entries). We stream it, keep only the fields we need, index it by
- * card name in memory, and refresh it every few hours.
+ * CK publishes its full price list once a day at api.cardkingdom.com/api/v2/pricelist
+ * (~68 MB JSON, ~150k entries, with NM/EX/VG/G prices and stock). We stream it, keep only
+ * the fields we need, index it by card name in memory, and refresh it every few hours.
  */
 
 const { http, getJson, normalizeName, toNumber } = require('./util');
 
-const PRICELIST_URL = process.env.CK_PRICELIST_URL || 'https://api.cardkingdom.com/api/pricelist';
+const PRICELIST_URL = process.env.CK_PRICELIST_URL || 'https://api.cardkingdom.com/api/v2/pricelist';
 const SITE = 'https://www.cardkingdom.com/';
 const REFRESH_MS = 6 * 60 * 60 * 1000;
-// CK pays this much extra when you take store credit instead of cash.
-const CREDIT_BONUS = Number(process.env.CK_CREDIT_BONUS || 0.3);
+// Card Kingdom condition grades, mapped to the NM/LP/MP/HP labels the Singapore shops use.
+const CONDITIONS = [
+  { key: 'nm', label: 'NM', equivalent: 'NM' },
+  { key: 'ex', label: 'EX', equivalent: 'LP' },
+  { key: 'vg', label: 'VG', equivalent: 'MP' },
+  { key: 'g', label: 'G', equivalent: 'HP' },
+];
 const UA = { 'User-Agent': 'mtg-sg-price-compare/1.0' };
 
 let index = null; // Map<normalizedName, entry[]>
@@ -87,16 +92,22 @@ function createRecordScanner(onRecord, onMeta) {
 }
 
 function slim(r) {
-  const buy = toNumber(r.price_buy);
-  if (!r.name || buy == null) return null;
+  const retail = toNumber(r.price_retail);
+  if (!r.name || retail == null) return null;
+  const cv = r.condition_values || {};
+  const conds = CONDITIONS.map((c) => {
+    const price = toNumber(cv[`${c.key}_price`]);
+    return price == null ? null : [price, Number(cv[`${c.key}_qty`] || 0)];
+  });
+  // Older (v1) lists have no per-condition data: treat the retail price as NM.
+  if (!conds.some(Boolean)) conds[0] = [retail, Number(r.qty_retail || 0)];
   return {
     name: r.name,
     edition: r.edition || '',
     variation: r.variation || '',
     foil: String(r.is_foil) === 'true',
-    buy,
-    qtyBuying: Number(r.qty_buying || 0),
-    retail: toNumber(r.price_retail),
+    conds, // [[price, qty] | null] in NM, EX, VG, G order (compact to save memory)
+    qty: Number(r.qty_retail || 0),
     url: r.url ? SITE + r.url : null,
   };
 }
@@ -172,16 +183,19 @@ async function usdToSgd() {
 
 /* ---------- Public API ---------- */
 
-function buylistSearchUrl(name) {
-  const u = new URL('/purchasing/mtg_singles', SITE);
-  u.searchParams.set('filter[search]', 'mtg_advanced');
+function searchUrl(name) {
+  const u = new URL('/catalog/search', SITE);
+  u.searchParams.set('search', 'header');
   u.searchParams.set('filter[name]', name);
   return u.toString();
 }
 
-/** Card Kingdom's buy prices for every version of a card, highest first. */
-async function buyPrices(cardName) {
-  const [idx, rate] = await Promise.all([ensureLoaded(), usdToSgd()]);
+const sgd = (usd, rate) => (rate && usd != null ? Math.round(usd * rate * 100) / 100 : null);
+
+/** Card Kingdom's retail prices for every version of a card: in stock first, cheapest first. */
+async function sellPrices(cardName) {
+  const [idx, fxr] = await Promise.all([ensureLoaded(), usdToSgd()]);
+  const rate = fxr.rate;
   const want = normalizeName(cardName);
   const seen = new Set();
   const rows = [];
@@ -193,32 +207,34 @@ async function buyPrices(cardName) {
       const id = `${e.edition}|${e.variation}|${e.foil}`;
       if (seen.has(id)) continue;
       seen.add(id);
-      const credit = Math.round(e.buy * (1 + CREDIT_BONUS) * 100) / 100;
+      const conditions = CONDITIONS.map((c, i) => {
+        const v = e.conds[i];
+        return v ? { grade: c.label, equivalent: c.equivalent, usd: v[0], sgd: sgd(v[0], rate), qty: v[1] } : null;
+      }).filter(Boolean);
+      const available = conditions.filter((c) => c.qty > 0);
+      const cheapest = available.reduce((m, c) => (m && m.usd <= c.usd ? m : c), null);
       rows.push({
         edition: e.edition,
         variation: e.variation,
         finish: e.foil ? 'foil' : 'nonfoil',
-        buyUsd: e.buy,
-        creditUsd: credit,
-        buySgd: rate.rate ? Math.round(e.buy * rate.rate * 100) / 100 : null,
-        creditSgd: rate.rate ? Math.round(credit * rate.rate * 100) / 100 : null,
-        buying: e.qtyBuying > 0,
-        qtyBuying: e.qtyBuying,
-        retailUsd: e.retail,
+        conditions,
+        inStock: available.length > 0,
+        qty: available.reduce((t, c) => t + c.qty, 0),
+        cheapest, // cheapest condition actually in stock
         url: e.url,
       });
     }
   }
-  rows.sort((a, b) => Number(b.buying) - Number(a.buying) || b.buyUsd - a.buyUsd);
+  const sortPrice = (r) => (r.cheapest ? r.cheapest.usd : r.conditions[0] ? r.conditions[0].usd : Infinity);
+  rows.sort((a, b) => Number(b.inStock) - Number(a.inStock) || sortPrice(a) - sortPrice(b));
   return {
     card: cardName,
     versions: rows,
-    buylistUrl: buylistSearchUrl(cardName),
+    searchUrl: searchUrl(cardName),
     priceListDate: meta.createdAt,
-    usdSgd: rate.rate,
-    usdSgdDate: rate.date,
-    creditBonus: CREDIT_BONUS,
+    usdSgd: rate,
+    usdSgdDate: fxr.date,
   };
 }
 
-module.exports = { buyPrices, ensureLoaded, _createRecordScanner: createRecordScanner };
+module.exports = { sellPrices, ensureLoaded, _createRecordScanner: createRecordScanner, _slim: slim };

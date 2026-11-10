@@ -93,12 +93,12 @@ app.get('/api/history', async (req, res) => {
   }
 });
 
-/** Card Kingdom buylist for every version of a card: GET /api/cardkingdom?name=Lightning%20Bolt */
+/** Card Kingdom retail (sell) prices for every version of a card: GET /api/cardkingdom?name=Lightning%20Bolt */
 app.get('/api/cardkingdom', async (req, res) => {
   const name = String(req.query.name || '').trim();
   if (!name) return res.status(400).json({ error: 'name is required' });
   try {
-    res.json(await cardkingdom.buyPrices(name));
+    res.json(await cardkingdom.sellPrices(name));
   } catch (err) {
     console.error(`[cardkingdom] ${name}: ${err.message}`);
     res.status(502).json({ card: name, versions: [], error: err.message });
@@ -172,6 +172,7 @@ app.get('/api/prices', async (req, res) => {
       storeName: store.name,
       searchUrl: store.searchPageUrl(name),
       listings,
+      ...(listings.diagnostics ? { diagnostics: listings.diagnostics } : {}),
       fetchedAt: new Date().toISOString(),
       ms: Date.now() - started,
     };

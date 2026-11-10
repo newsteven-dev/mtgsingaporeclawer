@@ -143,3 +143,16 @@ test('tcg marketplace parser accepts alternate field names and skips price-less 
   assert.equal(rows[0].stock, 2);
   assert.equal(rows[0].finish, 'foil');
 });
+
+test('card kingdom keeps retail price and stock per condition', () => {
+  const ck = require('../src/cardkingdom');
+  const e = ck._slim({
+    name: 'Lightning Bolt', edition: 'Masters 25', variation: '', is_foil: 'false', price_retail: '2.29', qty_retail: 21,
+    url: 'mtg/masters-25/lightning-bolt',
+    condition_values: { nm_price: '2.29', nm_qty: 20, ex_price: '1.83', ex_qty: 1, vg_price: '1.60', vg_qty: 0, g_price: '1.15', g_qty: 0 },
+  });
+  assert.deepEqual(e.conds, [[2.29, 20], [1.83, 1], [1.6, 0], [1.15, 0]]);
+  assert.equal(e.url, 'https://www.cardkingdom.com/mtg/masters-25/lightning-bolt');
+  // Older lists without condition_values fall back to the retail price as NM.
+  assert.deepEqual(ck._slim({ name: 'X', price_retail: '5', qty_retail: 2 }).conds, [[5, 2], null, null, null]);
+});

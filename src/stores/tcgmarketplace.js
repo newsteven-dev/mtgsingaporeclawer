@@ -32,15 +32,17 @@ function productUrl(id) {
   }
 }
 
-let cachedCategoryId = process.env.TCG_MTG_CATEGORY_ID || null;
+let cachedCategoryId = process.env.TCG_MTG_CATEGORY_ID ? Number(process.env.TCG_MTG_CATEGORY_ID) : null;
+let categoriesSeen = [];
 
 async function mtgCategoryId() {
   if (cachedCategoryId) return cachedCategoryId;
   const res = await getJson(new URL('category/getallcategory', API).toString());
   const list = res?.data?.data ?? res?.data ?? [];
   const arr = Array.isArray(list) ? list : [];
-  const mtg = arr.find((c) => /magic/i.test(c.title || c.name || ''));
-  cachedCategoryId = String(mtg ? mtg.id : 1);
+  categoriesSeen = arr.slice(0, 20).map((c) => ({ id: c.id, title: c.title || c.name }));
+  const mtg = arr.find((c) => /magic|\bmtg\b/i.test(c.title || c.name || ''));
+  cachedCategoryId = Number(mtg ? mtg.id : 1);
   return cachedCategoryId;
 }
 
@@ -100,6 +102,15 @@ async function search(cardName) {
     name: cardName,
   });
   const listings = parseResults(rows, cardName);
+  // Temporary diagnostics so the live site shows why a search comes back empty
+  // (this API isn't reachable from every network). Public listing data only.
+  listings.diagnostics = {
+    rows: rows.length,
+    categoryId,
+    categories: categoriesSeen,
+    firstRowKeys: Object.keys(rows[0] || {}),
+    firstRow: rows[0] ? Object.fromEntries(Object.entries(rows[0]).slice(0, 25).map(([k, v]) => [k, typeof v === 'string' ? v.slice(0, 80) : v])) : null,
+  };
   if (rows.length && !listings.length) {
     // Shows up in the server logs if the API's row format ever changes.
     console.warn(`[tcgmarketplace] ${rows.length} rows for "${cardName}" but none parsed; first row keys: ${Object.keys(rows[0] || {}).join(', ')}`);

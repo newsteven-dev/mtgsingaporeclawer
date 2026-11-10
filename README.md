@@ -28,20 +28,21 @@ npm start
 
 Then open http://localhost:3000. Add `?card=Lightning%20Bolt` to the URL to link straight to a card.
 
-## Card Kingdom buylist
+## Card Kingdom prices
 
-Each card page also shows what [Card Kingdom](https://www.cardkingdom.com/purchasing/mtg_singles) pays for every
-version of the card (edition, variation, foil or non-foil): cash, store credit (30% more), and how many they want.
-Versions Card Kingdom isn't buying right now are hidden by default.
+Each card page also shows what [Card Kingdom](https://www.cardkingdom.com/) **sells** every version of the card for
+(edition, variation, foil or non-foil), with the price and stock for each condition. Versions Card Kingdom has sold out
+of are hidden by default.
 
-- Prices come from Card Kingdom's public daily price list (`api.cardkingdom.com/api/pricelist`, about 48 MB).
-  The server streams it once, keeps a slim copy in memory (about 170 MB of RAM), and refreshes it every 6 hours.
+- Card Kingdom grades cards NM, EX, VG and G, roughly the same as NM, LP, MP and HP at the Singapore stores.
+  The **From** column is the cheapest condition that's in stock.
+- The headline shows Card Kingdom's cheapest in-stock copy and how the cheapest Singapore copy compares.
+  When the set names match, it also compares the same printing and condition as the cheapest Singapore copy.
+- Prices come from Card Kingdom's public daily price list (`api.cardkingdom.com/api/v2/pricelist`, about 68 MB).
+  The server streams it once, keeps a slim copy in memory (about 220 MB of RAM), and refreshes it every 6 hours.
   The first Card Kingdom lookup after the server starts takes a few seconds.
 - USD prices are converted to SGD with the daily rate from [Frankfurter](https://frankfurter.dev).
-  Set `USD_SGD_RATE` to use a fixed rate instead.
-- The headline compares Card Kingdom's offer for the same printing as the cheapest copy in Singapore,
-  when the set names match.
-- Buy prices are for Near Mint cards. Card Kingdom pays less for played cards, and you pay shipping to the US.
+  Set `USD_SGD_RATE` to use a fixed rate instead. Prices don't include shipping from the US.
 
 ## Price history (Supabase)
 
@@ -129,7 +130,7 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/autocomplete?q=bolt` | Card-name suggestions (Scryfall) |
 | `GET /api/card?name=Lightning%20Bolt` | Card details (Scryfall) |
 | `GET /api/prices?store=agora&name=Lightning%20Bolt[&refresh=1]` | Listings at one store (fresh results are saved to Supabase) |
-| `GET /api/cardkingdom?name=Lightning%20Bolt` | Card Kingdom buy prices for every version |
+| `GET /api/cardkingdom?name=Lightning%20Bolt` | Card Kingdom retail prices and stock for every version and condition |
 | `GET /api/history?name=Lightning%20Bolt&days=90` | Daily cheapest price per store |
 | `GET /api/trending` | Recently tracked cards with price change vs 7 days ago |
 | `GET /api/config` | Public sign-in settings (Supabase URL and publishable key) |
@@ -150,7 +151,6 @@ Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`.
 | `CACHE_MINUTES` | `10` | How long price results are cached |
 | `SEARCHES_PER_10_MIN` | `40` | Card searches allowed per visitor every 10 minutes |
 | `USD_SGD_RATE` | daily rate | Fixed USD to SGD rate for Card Kingdom prices |
-| `CK_CREDIT_BONUS` | `0.3` | Card Kingdom's store-credit bonus over cash |
 | `TCG_API_URL` | `https://thetcgmarketplace.com:3501/` | TCG Marketplace API base |
 | `TCG_MTG_CATEGORY_ID` | auto-detected | Skip the category lookup |
 | `MTGASIA_APP_ID` | value from the site | MTG Asia storefront app id |
