@@ -15,6 +15,8 @@
   let acController = null;
   let acTimer = null;
   let searchToken = 0;
+  const PAGE_SIZE = 20; // rows shown at first, and added by each "Show next 20"
+  let tableLimit = PAGE_SIZE;
 
   const money = (n) => (n == null ? '—' : `S$${Number(n).toFixed(2)}`);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -123,6 +125,7 @@
 
     $('#main').hidden = false;
     results = Object.fromEntries(stores.map((s) => [s.id, { status: 'loading' }]));
+    tableLimit = PAGE_SIZE;
     render();
 
     // Card info from Scryfall (canonical name, image).
@@ -159,13 +162,12 @@
   /* ---------------- Card Kingdom retail prices ---------------- */
 
   let ck = null; // { status, data }
-  let ckShowAll = false;
-  const CK_PREVIEW_ROWS = 12;
+  let ckLimit = PAGE_SIZE;
   const usd = (n) => (n == null ? '—' : `US$${Number(n).toFixed(2)}`);
 
   async function loadCardKingdom(name, token) {
     ck = { status: 'loading' };
-    ckShowAll = false;
+    ckLimit = PAGE_SIZE;
     renderCk();
     try {
       const res = await fetch(`/api/cardkingdom?name=${encodeURIComponent(name)}`);
@@ -233,7 +235,7 @@
     const onlyStock = $('#ck-instock').checked;
     const finish = $('#ck-finish').value;
     const rows = d.versions.filter((v) => (!onlyStock || v.inStock) && (!finish || v.finish === finish));
-    const shown = ckShowAll ? rows : rows.slice(0, CK_PREVIEW_ROWS);
+    const shown = rows.slice(0, ckLimit);
 
     // Cheapest copy Card Kingdom actually has in stock (any version, any condition).
     const best = d.versions.filter((v) => v.cheapest).reduce((m, v) => (m && m.cheapest.usd <= v.cheapest.usd ? m : v), null);
@@ -274,8 +276,10 @@
           .join('')
       : `<tr><td colspan="8" class="muted">No versions match.</td></tr>`;
 
-    more.hidden = rows.length <= CK_PREVIEW_ROWS;
-    more.textContent = ckShowAll ? 'Show fewer' : `Show all ${rows.length} versions`;
+    const ckRemaining = rows.length - shown.length;
+    more.hidden = ckRemaining <= 0;
+    more.textContent = `Show next ${Math.min(PAGE_SIZE, ckRemaining)}`;
+    $('#ck-shown').textContent = rows.length > PAGE_SIZE ? `Showing ${shown.length} of ${rows.length} versions` : '';
 
     const rate = d.usdSgd ? `Converted at US$1 = S$${Number(d.usdSgd).toFixed(4)}${d.usdSgdDate && d.usdSgdDate !== 'fixed' ? ` (${d.usdSgdDate})` : ''}. ` : '';
     $('#ck-note').innerHTML = `Card Kingdom grades cards NM, EX, VG and G, roughly the same as NM, LP, MP and HP at the Singapore stores.
@@ -284,9 +288,14 @@
       <a href="${esc(d.searchUrl)}" target="_blank" rel="noopener">Search Card Kingdom ↗</a>`;
   }
 
-  ['#ck-instock', '#ck-finish'].forEach((sel) => $(sel).addEventListener('change', renderCk));
+  ['#ck-instock', '#ck-finish'].forEach((sel) =>
+    $(sel).addEventListener('change', () => {
+      ckLimit = PAGE_SIZE;
+      renderCk();
+    }),
+  );
   $('#ck-more').addEventListener('click', () => {
-    ckShowAll = !ckShowAll;
+    ckLimit += PAGE_SIZE;
     renderCk();
   });
 
@@ -551,8 +560,13 @@
       .sort((a, b) => a.price - b.price);
 
     $('#count').textContent = rows.length ? `(${rows.length})` : '';
+    const visible = rows.slice(0, tableLimit);
+    const remaining = rows.length - visible.length;
+    $('#table-more').hidden = remaining <= 0;
+    $('#table-more').textContent = `Show next ${Math.min(PAGE_SIZE, remaining)}`;
+    $('#table-shown').textContent = rows.length > PAGE_SIZE ? `Showing ${visible.length} of ${rows.length}` : '';
     $('#table tbody').innerHTML = rows.length
-      ? rows
+      ? visible
           .map(
             (l) => `<tr class="${l.inStock ? '' : 'oos'}">
             <td class="price">${money(l.price)}</td>
@@ -569,7 +583,16 @@
     if (ck && ck.status === 'ok') renderCk(); // keep the "cheapest in Singapore" comparison current
   }
 
-  ['#f-stock', '#f-finish', '#f-cond'].forEach((sel) => $(sel).addEventListener('change', render));
+  ['#f-stock', '#f-finish', '#f-cond'].forEach((sel) =>
+    $(sel).addEventListener('change', () => {
+      tableLimit = PAGE_SIZE;
+      render();
+    }),
+  );
+  $('#table-more').addEventListener('click', () => {
+    tableLimit += PAGE_SIZE;
+    render();
+  });
   $('#refresh').addEventListener('click', () => currentCard && compare(currentCard.name || input.value.trim(), { refresh: true }));
 
   /* ---------------- Boot ---------------- */
