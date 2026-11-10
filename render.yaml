@@ -1,0 +1,20 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# In Render: New -> Blueprint -> pick this repository.
+services:
+  - type: web
+    name: mtg-sg-price-compare
+    runtime: node
+    region: singapore
+    plan: free
+    branch: main
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/stores
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: SUPABASE_URL
+        value: https://dlkknzbftscwktzzpwcn.supabase.co
+      # Secret: Render asks for this value when you create the service. Never commit it.
+      - key: SUPABASE_SECRET_KEY
+        sync: false
