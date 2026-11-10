@@ -149,7 +149,202 @@
         render();
       }),
     );
+    if (token !== searchToken) return;
+    loadHistory(name, token);
+    loadTrending();
   }
+
+  /* ---------------- Price history (Supabase) ---------------- */
+
+  let historyRows = [];
+  let historyName = '';
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const sgToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' }).format(new Date());
+  const fmtDay = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+
+  async function loadHistory(name, token) {
+    try {
+      const res = await fetch(`/api/history?name=${encodeURIComponent(name)}&days=90`);
+      const json = await res.json();
+      if (token !== searchToken) return;
+      if (!json.enabled) return ($('#history').hidden = true);
+      historyRows = json.days || [];
+      historyName = name;
+      $('#history').hidden = false;
+      renderHistory();
+    } catch (err) {
+      console.warn('history failed', err);
+    }
+  }
+
+  /** Merge stored daily rows with what we just fetched, so today's point is always current. */
+  function historySeries(field) {
+    const finish = { min_price: null, min_price_nonfoil: 'nonfoil', min_price_foil: 'foil' }[field];
+    const byStore = Object.fromEntries(stores.map((s) => [s.id, new Map()]));
+    for (const r of historyRows) {
+      const v = r[field] == null ? null : Number(r[field]);
+      if (v != null && byStore[r.store]) byStore[r.store].set(r.day, v);
+    }
+    const today = sgToday();
+    for (const s of stores) {
+      const r = results[s.id];
+      if (r?.status !== 'ok') continue;
+      const live = r.data.listings.filter((l) => l.inStock && (!finish || l.finish === finish)).map((l) => l.price);
+      if (!live.length) continue;
+      const m = byStore[s.id];
+      m.set(today, Math.min(m.get(today) ?? Infinity, ...live));
+    }
+    return stores
+      .map((s) => ({ id: s.id, name: s.name, points: [...byStore[s.id]].map(([day, v]) => ({ day, v })).sort((a, b) => a.day.localeCompare(b.day)) }))
+      .filter((s) => s.points.length);
+  }
+
+  function renderHistory() {
+    const field = $('#h-finish').value;
+    const series = historySeries(field);
+    const color = (id) => `var(--series-${id})`;
+    const days = [...new Set(series.flatMap((s) => s.points.map((p) => p.day)))].sort();
+    const chartEl = $('#h-chart');
+    const tableEl = $('#h-table');
+    const showTable = $('#h-view').getAttribute('aria-pressed') === 'true';
+
+    $('#h-legend').innerHTML = series.map((s) => `<li><i style="background:${color(s.id)}"></i>${esc(s.name)}</li>`).join('');
+    $('#h-note').textContent = days.length <= 1
+      ? 'Tracking started today. Each search adds a data point, so the trend builds up as this card is searched on more days.'
+      : `${days.length} days of data since ${fmtDay(days[0])}.`;
+
+    // Table view (also the accessible alternative to the chart).
+    tableEl.hidden = !showTable;
+    chartEl.hidden = showTable;
+    $('#h-legend').hidden = showTable;
+    if (showTable) {
+      const lookup = Object.fromEntries(series.map((s) => [s.id, Object.fromEntries(s.points.map((p) => [p.day, p.v]))]));
+      tableEl.innerHTML = `<table><thead><tr><th>Day</th>${series.map((s) => `<th>${esc(s.name)}</th>`).join('')}</tr></thead><tbody>${days
+        .slice()
+        .reverse()
+        .map((d) => `<tr><td>${fmtDay(d)}</td>${series.map((s) => `<td>${lookup[s.id][d] != null ? money(lookup[s.id][d]) : '—'}</td>`).join('')}</tr>`)
+        .join('')}</tbody></table>`;
+      return;
+    }
+
+    chartEl.innerHTML = '';
+    if (!series.length) {
+      chartEl.innerHTML = '<p class="muted small">No in-stock prices to chart yet.</p>';
+      return;
+    }
+
+    const W = 760, H = 260, m = { t: 10, r: 16, b: 26, l: 56 };
+    const values = series.flatMap((s) => s.points.map((p) => p.v));
+    let lo = Math.min(...values), hi = Math.max(...values);
+    if (lo === hi) { lo *= 0.9; hi *= 1.1; }
+    // "Nice" tick step (1, 2, 2.5 or 5 x 10^n) so labels are evenly spaced and never repeat.
+    const raw = (hi - lo) / 4;
+    const mag = 10 ** Math.floor(Math.log10(raw));
+    const step = [1, 2, 2.5, 5, 10].map((f) => f * mag).find((s) => s >= raw);
+    lo = Math.max(0, Math.floor(lo / step) * step);
+    hi = Math.ceil(hi / step) * step;
+    const decimals = Number.isInteger(step) ? 0 : Number.isInteger(step * 10) ? 1 : 2;
+    const x = (d) => (days.length === 1 ? m.l + (W - m.l - m.r) / 2 : m.l + (days.indexOf(d) / (days.length - 1)) * (W - m.l - m.r));
+    const y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    const el = (tag, attrs, parent = svg) => {
+      const n = document.createElementNS(SVG_NS, tag);
+      for (const k in attrs) n.setAttribute(k, attrs[k]);
+      parent.appendChild(n);
+      return n;
+    };
+
+    // Recessive grid + y axis labels.
+    const grid = el('g', { class: 'grid' });
+    const axis = el('g', { class: 'axis' });
+    for (let v = lo; v <= hi + step / 1000; v += step) {
+      el('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }, grid);
+      el('text', { x: m.l - 8, y: y(v) + 4, 'text-anchor': 'end' }, axis).textContent = `S$${v.toFixed(decimals)}`;
+    }
+    const tickEvery = Math.max(1, Math.ceil(days.length / 6));
+    days.forEach((d, i) => {
+      if (i % tickEvery && i !== days.length - 1) return;
+      el('text', { x: x(d), y: H - 6, 'text-anchor': days.length === 1 ? 'middle' : i === 0 ? 'start' : i === days.length - 1 ? 'end' : 'middle' }, axis).textContent = fmtDay(d);
+    });
+
+    const cross = el('line', { class: 'cross', y1: m.t, y2: H - m.b, visibility: 'hidden' });
+    const showMarkers = days.length <= 20;
+    const hoverDots = [];
+    for (const s of series) {
+      const g = el('g', { class: 'series' });
+      if (s.points.length > 1) {
+        el('path', { d: s.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.day).toFixed(1)},${y(p.v).toFixed(1)}`).join(''), stroke: color(s.id) }, g);
+      }
+      if (showMarkers || s.points.length === 1) for (const p of s.points) el('circle', { cx: x(p.day), cy: y(p.v), r: 4, fill: color(s.id) }, g);
+      hoverDots.push({ s, dot: el('circle', { r: 5, fill: color(s.id), visibility: 'hidden' }, g) });
+    }
+
+    // Crosshair + tooltip, snapped to the nearest day.
+    const tip = $('#h-tip');
+    const hit = el('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: 'transparent' });
+    const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); hoverDots.forEach((h) => h.dot.setAttribute('visibility', 'hidden')); };
+    hit.addEventListener('pointerleave', hide);
+    hit.addEventListener('pointermove', (e) => {
+      const pt = svg.getBoundingClientRect();
+      const sx = ((e.clientX - pt.left) / pt.width) * W;
+      const day = days.reduce((best, d) => (Math.abs(x(d) - sx) < Math.abs(x(best) - sx) ? d : best), days[0]);
+      cross.setAttribute('x1', x(day)); cross.setAttribute('x2', x(day)); cross.setAttribute('visibility', 'visible');
+      const rows = [];
+      for (const h of hoverDots) {
+        const p = h.s.points.find((q) => q.day === day);
+        if (!p) { h.dot.setAttribute('visibility', 'hidden'); continue; }
+        h.dot.setAttribute('cx', x(day)); h.dot.setAttribute('cy', y(p.v)); h.dot.setAttribute('visibility', 'visible');
+        rows.push({ s: h.s, v: p.v });
+      }
+      rows.sort((a, b) => a.v - b.v);
+      tip.innerHTML = `<b>${fmtDay(day)}</b>${rows.map((r) => `<div><span><i style="background:${color(r.s.id)}"></i>${esc(r.s.name)}</span><em>${money(r.v)}</em></div>`).join('') || '<div>No data</div>'}`;
+      tip.hidden = false;
+      const card = chartEl.parentElement.getBoundingClientRect();
+      const left = e.clientX - card.left + 14;
+      tip.style.left = `${Math.min(left, card.width - tip.offsetWidth - 8)}px`;
+      tip.style.top = `${e.clientY - card.top + 14}px`;
+    });
+    chartEl.appendChild(svg);
+  }
+
+  $('#h-finish').addEventListener('change', renderHistory);
+  $('#h-view').addEventListener('click', (e) => {
+    const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+    e.currentTarget.setAttribute('aria-pressed', String(on));
+    e.currentTarget.textContent = on ? 'Show chart' : 'Show table';
+    renderHistory();
+  });
+
+  /* ---------------- Trending (recently tracked cards) ---------------- */
+
+  async function loadTrending() {
+    try {
+      const json = await (await fetch('/api/trending')).json();
+      const cards = json.cards || [];
+      $('#trending').hidden = !json.enabled || !cards.length;
+      $('#trending-list').innerHTML = cards
+        .map((c) => {
+          const now = c.cheapest_now == null ? null : Number(c.cheapest_now);
+          const before = c.cheapest_7d_ago == null ? null : Number(c.cheapest_7d_ago);
+          let change = '';
+          if (now != null && before) {
+            const pct = ((now - before) / before) * 100;
+            if (Math.abs(pct) >= 0.5) change = ` <span class="${pct < 0 ? 'down' : 'up'}">${pct < 0 ? '▼' : '▲'}${Math.abs(pct).toFixed(0)}% 7d</span>`;
+          }
+          return `<li><button type="button" data-card="${esc(c.card_name)}">${esc(c.card_name)} <span class="tp">${now != null ? `from ${money(now)}` : ''}${change}</span></button></li>`;
+        })
+        .join('');
+    } catch (err) {
+      console.warn('trending failed', err);
+    }
+  }
+
+  $('#trending-list').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-card]');
+    if (b) choose(b.dataset.card);
+  });
 
   function renderCard() {
     const c = currentCard || {};
@@ -246,6 +441,7 @@
     .then((r) => r.json())
     .then((s) => {
       stores = s;
+      loadTrending();
       const initial = new URLSearchParams(location.search).get('card');
       if (initial) choose(initial);
     });

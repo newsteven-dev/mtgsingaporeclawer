@@ -20,6 +20,10 @@
         <button type="submit">Compare</button>
       </form>
       <p class="hint">Card names are suggested by <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>.</p>
+      <section id="trending" class="trending" hidden>
+        <h3>Recently tracked cards</h3>
+        <ul id="trending-list"></ul>
+      </section>
     </div>
   </header>
 
@@ -37,6 +41,23 @@
     <section>
       <h3>Cheapest per store</h3>
       <div id="summary" class="summary"></div>
+    </section>
+
+    <section id="history" class="history" hidden>
+      <div class="filters">
+        <h3>Price history <span class="muted small">cheapest in-stock price per day</span></h3>
+        <label>Finish
+          <select id="h-finish"><option value="min_price">Any</option><option value="min_price_nonfoil">Non-foil</option><option value="min_price_foil">Foil</option></select>
+        </label>
+        <button type="button" id="h-view" class="ghost" aria-pressed="false">Show table</button>
+      </div>
+      <div class="chart-card">
+        <ul id="h-legend" class="legend"></ul>
+        <div id="h-chart" class="chart" role="img" aria-label="Price history chart"></div>
+        <div id="h-tip" class="tip" hidden></div>
+        <div id="h-table" class="table-wrap" hidden></div>
+        <p id="h-note" class="muted small"></p>
+      </div>
     </section>
 
     <section>

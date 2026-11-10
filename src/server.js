@@ -1,9 +1,17 @@
 'use strict';
 
+// Load .env if present (Node 20.12+). Keeps SUPABASE_SECRET_KEY out of the code.
+try {
+  process.loadEnvFile();
+} catch {
+  /* no .env file */
+}
+
 const path = require('path');
 const express = require('express');
 const stores = require('./stores');
 const scryfall = require('./scryfall');
+const db = require('./db');
 const { TtlCache } = require('./util');
 
 const PORT = Number(process.env.PORT || 3000);
@@ -37,6 +45,29 @@ app.get('/api/card', async (req, res) => {
   }
 });
 
+/** Daily cheapest price per store: GET /api/history?name=Lightning%20Bolt&days=90 */
+app.get('/api/history', async (req, res) => {
+  if (!db.enabled) return res.json({ enabled: false, days: [] });
+  const name = String(req.query.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'name is required' });
+  const days = Math.min(365, Math.max(1, Number(req.query.days) || 90));
+  try {
+    res.json({ enabled: true, days: await db.history(name, days) });
+  } catch (err) {
+    res.status(502).json({ enabled: true, days: [], error: err.message });
+  }
+});
+
+/** Recently searched cards: GET /api/trending */
+app.get('/api/trending', async (_req, res) => {
+  if (!db.enabled) return res.json({ enabled: false, cards: [] });
+  try {
+    res.json({ enabled: true, cards: await db.trending() });
+  } catch (err) {
+    res.status(502).json({ enabled: true, cards: [], error: err.message });
+  }
+});
+
 /** Price listings for one card at one store: GET /api/prices?store=agora&name=Lightning%20Bolt */
 app.get('/api/prices', async (req, res) => {
   const name = String(req.query.name || '').trim();
@@ -66,6 +97,8 @@ app.get('/api/prices', async (req, res) => {
     };
     priceCache.set(key, payload);
     res.json(payload);
+    // Record fresh results for price history; never let storage errors affect the response.
+    db.recordSnapshot(name, store.id, listings).catch((err) => console.error(`[db] ${store.id} ${name}: ${err.message}`));
   } catch (err) {
     console.error(`[${store.id}] ${name}: ${err.message}`);
     res.status(502).json({
@@ -80,7 +113,10 @@ app.get('/api/prices', async (req, res) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, () => console.log(`MTG SG price compare running at http://localhost:${PORT}`));
+  app.listen(PORT, () => {
+    console.log(`MTG SG price compare running at http://localhost:${PORT}`);
+    console.log(db.enabled ? 'Price history: saving to Supabase' : 'Price history: off (set SUPABASE_URL and SUPABASE_SECRET_KEY to enable)');
+  });
 }
 
 module.exports = app;
