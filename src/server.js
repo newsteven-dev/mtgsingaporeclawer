@@ -172,6 +172,7 @@ app.get('/api/prices', async (req, res) => {
       storeName: store.name,
       searchUrl: store.searchPageUrl(name),
       listings,
+      ...(listings.diagnostics ? { diagnostics: listings.diagnostics } : {}),
       fetchedAt: new Date().toISOString(),
       ms: Date.now() - started,
     };
