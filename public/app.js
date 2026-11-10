@@ -307,9 +307,21 @@
   const sgToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' }).format(new Date());
   const fmtDay = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
 
+  /** Authorization header for signed-in-only data, or null when signed out. */
+  async function authHeaders() {
+    const auth = await window.mtgAuthReady;
+    const t = auth && (await auth.token());
+    return t ? { Authorization: `Bearer ${t}` } : null;
+  }
+
   async function loadHistory(name, token) {
     try {
-      const res = await fetch(`/api/history?name=${encodeURIComponent(name)}&days=90`);
+      const headers = await authHeaders();
+      if (token !== searchToken) return;
+      // Past searches are only shown to signed-in users.
+      if (!headers) return ($('#history').hidden = true);
+      const res = await fetch(`/api/history?name=${encodeURIComponent(name)}&days=90`, { headers });
+      if (!res.ok) return ($('#history').hidden = true);
       const json = await res.json();
       if (token !== searchToken) return;
       if (!json.enabled) return ($('#history').hidden = true);
@@ -466,7 +478,11 @@
 
   async function loadTrending() {
     try {
-      const json = await (await fetch('/api/trending')).json();
+      const headers = await authHeaders();
+      if (!headers) return ($('#trending').hidden = true);
+      const res = await fetch('/api/trending', { headers });
+      if (!res.ok) return ($('#trending').hidden = true);
+      const json = await res.json();
       const cards = json.cards || [];
       $('#trending').hidden = !json.enabled || !cards.length;
       $('#trending-list').innerHTML = cards

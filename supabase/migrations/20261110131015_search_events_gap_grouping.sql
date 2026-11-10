@@ -1,5 +1,4 @@
--- Views behind the signed-in "Captured searches" page. Applied to the Supabase project
--- as migrations "search_log_views" and "search_events_gap_grouping".
+-- Regroup searches by time gaps instead of clock minutes (applied as migration "search_events_gap_grouping").
 
 -- A "search" is a run of store checks for the same card with gaps under 2 minutes.
 create or replace view public.search_events with (security_invoker = true) as

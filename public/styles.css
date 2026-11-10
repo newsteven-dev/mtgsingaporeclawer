@@ -182,6 +182,19 @@ tr:last-child td { border-bottom: 0; }
   background: #24292f; color: #fff; font-weight: 600; font-size: 14px; text-decoration: none;
 }
 .signin-btn:hover { background: #32383f; }
+.account { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ghost-btn {
+  display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 10px; font-weight: 600; font-size: 14px;
+  color: var(--text); background: var(--bg); border: 1px solid var(--border); text-decoration: none;
+}
+.ghost-btn:hover { background: var(--hover); }
+.logout-btn {
+  padding: 8px 14px; border-radius: 10px; font-weight: 600; font-size: 14px;
+  background: transparent; color: var(--accent); border: 1px solid var(--border);
+}
+.logout-btn:hover { background: var(--hover); }
+.logout-btn:disabled { opacity: .6; cursor: default; }
+
 @media (prefers-color-scheme: dark) {
   .signin-btn { background: #f0f2f4; color: #1f2328; }
   .signin-btn:hover { background: #ffffff; }
