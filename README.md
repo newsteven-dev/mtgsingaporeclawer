@@ -51,6 +51,26 @@ The database schema is in `supabase/migrations/` and is already applied to the p
 All tables have Row Level Security turned on with no public policies, so only the server's secret key can read or write them.
 Results are cached for 10 minutes, so a card searched repeatedly is saved at most once per store every 10 minutes.
 
+## Put it on the internet (Render)
+
+The repo includes a `render.yaml`, so [Render](https://render.com) can set everything up from it.
+
+1. Sign up at https://render.com with your GitHub account.
+2. Click **New → Blueprint**, choose the `mtgsingaporeclawer` repository and click **Connect**.
+3. Render reads `render.yaml` and asks for `SUPABASE_SECRET_KEY`. Paste your `sb_secret_...` key and click **Apply**.
+4. After a few minutes the app is live at an address like `https://mtg-sg-price-compare.onrender.com`.
+   Render redeploys automatically every time `main` changes.
+
+Notes:
+
+- The free plan sleeps after about 15 minutes without visitors, so the first visit after that takes 30–60 seconds to load.
+  Upgrade the service to a paid instance in Render to keep it always on.
+- The service runs in Render's Singapore region, close to the shops.
+- Each visitor is limited to about 40 card searches per 10 minutes (`SEARCHES_PER_10_MIN`) so the public site can't be used to flood the shops.
+
+Any host that runs Node.js works the same way: build with `npm ci`, start with `npm start`, and set the
+`SUPABASE_URL` and `SUPABASE_SECRET_KEY` environment variables.
+
 ## How it works
 
 - `public/` is the web page. While you type, it asks `/api/autocomplete` for suggestions (debounced; ↑/↓, Tab and Enter work).
@@ -81,6 +101,7 @@ Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`.
 | `SUPABASE_URL` | none | Supabase project URL (turns on price history) |
 | `SUPABASE_SECRET_KEY` | none | Supabase secret or service_role key, server only |
 | `CACHE_MINUTES` | `10` | How long price results are cached |
+| `SEARCHES_PER_10_MIN` | `40` | Card searches allowed per visitor every 10 minutes |
 | `TCG_API_URL` | `https://thetcgmarketplace.com:3501/` | TCG Marketplace API base |
 | `TCG_MTG_CATEGORY_ID` | auto-detected | Skip the category lookup |
 | `MTGASIA_APP_ID` | value from the site | MTG Asia storefront app id |

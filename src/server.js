@@ -22,7 +22,35 @@ const inflight = new Map();
 
 const app = express();
 app.disable('x-powered-by');
+// Behind a host's load balancer (Render, Railway, ...), take the client IP from X-Forwarded-For.
+app.set('trust proxy', 1);
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+/**
+ * Simple per-IP limit so a public deployment can't be used to hammer the shops
+ * (each card search makes one /api/prices call per store).
+ */
+function rateLimit({ windowMs, max }) {
+  const hits = new Map();
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, h] of hits) if (h.reset <= now) hits.delete(ip);
+  }, windowMs).unref();
+  return (req, res, next) => {
+    const now = Date.now();
+    let h = hits.get(req.ip);
+    if (!h || h.reset <= now) hits.set(req.ip, (h = { count: 0, reset: now + windowMs }));
+    if (++h.count > max) {
+      res.set('Retry-After', String(Math.ceil((h.reset - now) / 1000)));
+      return res.status(429).json({ error: 'Too many searches, please wait a few minutes and try again.', listings: [] });
+    }
+    next();
+  };
+}
+
+const SEARCHES_PER_10_MIN = Number(process.env.SEARCHES_PER_10_MIN || 40);
+app.use('/api/prices', rateLimit({ windowMs: 10 * 60 * 1000, max: SEARCHES_PER_10_MIN * stores.list.length }));
+app.use('/api/autocomplete', rateLimit({ windowMs: 60 * 1000, max: 120 }));
 
 app.get('/api/stores', (_req, res) => {
   res.json(stores.list.map(({ id, name, homepage }) => ({ id, name, homepage })));
