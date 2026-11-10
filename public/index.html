@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MTG SG Price Compare</title>
+  <meta name="description" content="Compare Magic: The Gathering singles prices across Singapore game stores." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <h1>MTG SG Price Compare</h1>
+      <p class="sub">Search a card and compare singles prices at Agora Hobby, MTG Asia, Mox &amp; Lotus, The TCG Marketplace and Grey Ogre Games.</p>
+      <form id="search-form" class="search" autocomplete="off" role="search">
+        <div class="combo" role="combobox" aria-haspopup="listbox" aria-owns="suggestions" aria-expanded="false" id="combo">
+          <input id="q" type="text" placeholder="Start typing a card name, e.g. Lightning Bolt" aria-autocomplete="list" aria-controls="suggestions" spellcheck="false" autofocus />
+          <ul id="suggestions" role="listbox" hidden></ul>
+        </div>
+        <button type="submit">Compare</button>
+      </form>
+      <p class="hint">Card names are suggested by <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>.</p>
+    </div>
+  </header>
+
+  <main class="wrap" id="main" hidden>
+    <section class="card-head">
+      <img id="card-img" alt="" />
+      <div>
+        <h2 id="card-name"></h2>
+        <p id="card-type" class="muted"></p>
+        <p id="card-ref" class="muted"></p>
+        <p class="links"><a id="card-scryfall" target="_blank" rel="noopener">Scryfall</a> · <a id="card-gatherer" target="_blank" rel="noopener">Gatherer</a></p>
+      </div>
+    </section>
+
+    <section>
+      <h3>Cheapest per store</h3>
+      <div id="summary" class="summary"></div>
+    </section>
+
+    <section>
+      <div class="filters">
+        <h3>All listings <span id="count" class="muted"></span></h3>
+        <label><input type="checkbox" id="f-stock" checked /> In stock only</label>
+        <label>Finish
+          <select id="f-finish"><option value="">Any</option><option value="nonfoil">Non-foil</option><option value="foil">Foil</option></select>
+        </label>
+        <label>Condition
+          <select id="f-cond"><option value="">Any</option><option>NM</option><option>LP</option><option>MP</option><option>HP</option><option>DMG</option></select>
+        </label>
+        <button type="button" id="refresh" class="ghost">Refresh prices</button>
+      </div>
+      <div class="table-wrap">
+        <table id="table">
+          <thead><tr><th>Price</th><th>Store</th><th>Card / printing</th><th>Cond.</th><th>Finish</th><th>Stock</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="muted small">Prices in SGD as listed by each store. Store pages change over time; always confirm on the store before buying. TCG Marketplace shows the lowest seller price.</p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
