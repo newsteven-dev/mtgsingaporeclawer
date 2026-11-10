@@ -21,15 +21,25 @@
           <button type="button" id="logout-btn" class="logout-btn" hidden>Log out</button>
         </div>
       </div>
-      <p class="sub">Search a card and compare singles prices at Agora Hobby, MTG Asia, Mox &amp; Lotus, The TCG Marketplace and Grey Ogre Games.</p>
+      <p class="sub">Search a card and compare singles prices at Agora Hobby, MTG Asia, Mox &amp; Lotus, The TCG Marketplace, Grey Ogre Games, Flagship Games and Games Haven.</p>
       <form id="search-form" class="search" autocomplete="off" role="search">
         <div class="combo" role="combobox" aria-haspopup="listbox" aria-owns="suggestions" aria-expanded="false" id="combo">
-          <input id="q" type="text" placeholder="Start typing a card name, e.g. Lightning Bolt" aria-autocomplete="list" aria-controls="suggestions" spellcheck="false" autofocus />
+          <input id="q" type="search" enterkeyhint="search" placeholder="Start typing a card name, e.g. Lightning Bolt" aria-label="Card name" aria-autocomplete="list" aria-controls="suggestions" spellcheck="false" autofocus />
           <ul id="suggestions" role="listbox" hidden></ul>
         </div>
-        <button type="submit">Compare</button>
       </form>
       <p class="hint">Card names are suggested by <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>.</p>
+      <section id="latest" class="latest" hidden aria-labelledby="latest-title">
+        <div class="latest-head">
+          <h3 id="latest-title">Top 5 in <span id="latest-set"></span></h3>
+          <div class="seg" role="group" aria-label="Rank by">
+            <button type="button" class="seg-btn latest-rank" data-rank="price" aria-pressed="true">By price</button>
+            <button type="button" class="seg-btn latest-rank" data-rank="played" aria-pressed="false">Most played</button>
+          </div>
+        </div>
+        <ol id="latest-list" class="latest-list"></ol>
+        <p id="latest-note" class="muted small"></p>
+      </section>
       <section id="trending" class="trending" hidden>
         <h3>Recently tracked cards</h3>
         <ul id="trending-list"></ul>

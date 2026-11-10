@@ -119,6 +119,8 @@ tr:last-child td { border-bottom: 0; }
   --series-moxandlotus: #1baf7a;
   --series-tcgmarketplace: #eda100;
   --series-greyogre: #e87ba4;
+  --series-flagship: #008300;
+  --series-gameshaven: #6250d6;
   --grid: #ebe8e1;
 }
 @media (prefers-color-scheme: dark) {
@@ -128,6 +130,8 @@ tr:last-child td { border-bottom: 0; }
     --series-moxandlotus: #199e70;
     --series-tcgmarketplace: #c98500;
     --series-greyogre: #d55181;
+    --series-flagship: #008300;
+    --series-gameshaven: #9085e9;
     --grid: #2c2a27;
   }
 }
@@ -240,6 +244,23 @@ code { font-size: 13px; }
   .search button { padding: 12px; }
   .card-head img { width: 110px; }
 }
+
+/* Top 5 in the newest set, under the search bar */
+.latest { margin-top: 18px; }
+.latest-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.latest-head h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); }
+.latest-head h3 span { color: var(--text); }
+.latest-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.latest-card { display: flex; flex-direction: column; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px; min-width: 0; }
+.latest-pick { display: flex; gap: 8px; align-items: flex-start; background: none; color: var(--text); padding: 0; text-align: left; font-weight: 400; font-size: 14px; border-radius: 6px; }
+.latest-pick:hover .latest-name { text-decoration: underline; }
+.latest-pick img { width: 48px; height: auto; border-radius: 3px; flex: none; }
+.latest-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.latest-name { font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.latest-rank-n { color: var(--muted); font-weight: 500; margin-right: 2px; }
+.latest-price { font-variant-numeric: tabular-nums; font-size: 13px; }
+.latest-tcg { margin-left: 56px; }
+@media (max-width: 900px) { .latest-list { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); } }
 
 /* Top searches: ranked horizontal bars (single measure, one hue) */
 :root { --bar: #2a78d6; }

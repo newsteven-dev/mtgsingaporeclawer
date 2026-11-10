@@ -1,6 +1,6 @@
 # MTG SG Price Compare
 
-Type a Magic: The Gathering card name and compare its singles prices across five Singapore stores:
+Type a Magic: The Gathering card name and compare its singles prices across seven Singapore stores:
 
 | Store | How prices are read |
 | --- | --- |
@@ -9,6 +9,8 @@ Type a Magic: The Gathering card name and compare its singles prices across five
 | [Mox & Lotus](https://moxandlotus.sg/) | The storefront's JSON product search (`/api/products?search=`) |
 | [The TCG Marketplace](https://thetcgmarketplace.com/) | The storefront's product filter API (`:3501/product/filter`), lowest seller price |
 | [Grey Ogre Games](https://www.greyogregames.com/) | Shopify search results (`title:"<card>"`), per-condition variants |
+| [Flagship Games](https://www.flagshipgames.sg/) | Shopify search for in-stock products, then each product's Shopify JSON for per-condition prices (stock counts aren't published) |
+| [Games Haven](https://www.gameshaventcg.com/) | Same BinderPOS storefront as Grey Ogre: search results with per-condition prices and stock |
 
 Card-name autocomplete and card details (image, type line, USD reference price) come from the
 [Scryfall API](https://scryfall.com/docs/api). Every card also links to its
@@ -27,6 +29,20 @@ npm start
 ```
 
 Then open http://localhost:3000. Add `?card=Lightning%20Bolt` to the URL to link straight to a card.
+
+## Top 5 in the newest set
+
+Under the search bar, the main page shows the top 5 cards of the newest Magic set (the most recent paper
+expansion or core set on Scryfall), with a switch between:
+
+- **By price**: highest TCGplayer market price.
+- **Most played**: lowest EDHREC rank, i.e. played in the most Commander decks.
+
+Prices are TCGplayer market prices in USD, which Scryfall publishes, shown with an S$ estimate. Click a card to compare
+it across the Singapore stores, or follow its TCGplayer link. Results are cached for 6 hours.
+
+TCGplayer's own "trending" list isn't used: it's only available from TCGplayer's internal site API, which isn't
+meant for other apps, and TCGplayer's public API is closed to new developers.
 
 ## Card Kingdom prices
 
@@ -136,6 +152,7 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/autocomplete?q=bolt` | Card-name suggestions (Scryfall) |
 | `GET /api/card?name=Lightning%20Bolt` | Card details (Scryfall) |
 | `GET /api/prices?store=agora&name=Lightning%20Bolt[&refresh=1]` | Listings at one store (fresh results are saved to Supabase) |
+| `GET /api/latest-set?rank=price\|played` | Top 5 cards of the newest set (Scryfall, TCGplayer prices) |
 | `GET /api/cardkingdom?name=Lightning%20Bolt` | Card Kingdom retail prices and stock for every version and condition |
 | `GET /api/history?name=Lightning%20Bolt&days=90` | Daily cheapest price per store (signed-in allowlisted user only) |
 | `GET /api/trending` | Recently tracked cards with price change vs 7 days ago (signed-in allowlisted user only) |
@@ -144,7 +161,10 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/admin/top?period=day\|month&start=YYYY-MM-DD` | Top 20 searched cards for a day or month (signed-in allowlisted user only) |
 | `GET /api/admin/snapshots?ids=1,2` | Store snapshots and listings for one search (signed-in allowlisted user only) |
 
-Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`.
+Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`, `flagship`, `gameshaven`.
+
+The **Cheapest per store** boxes are ordered by price: the store with the cheapest in-stock copy comes first,
+then stores still loading, then stores with nothing in stock or that couldn't be reached.
 
 ### Configuration (environment variables)
 
