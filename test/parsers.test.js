@@ -107,3 +107,23 @@ test('tcg marketplace parser', () => {
   assert.equal(rows[0].finish, 'foil');
   assert.match(rows[0].url, /^https:\/\/thetcgmarketplace\.com\/product\/B\/.+\/0$/);
 });
+
+test('card kingdom streaming scanner handles records split across chunks', () => {
+  const ck = require('../src/cardkingdom');
+  const doc = JSON.stringify({
+    meta: { created_at: '2026-11-10 04:09:39', base_url: 'https://www.cardkingdom.com/' },
+    data: [
+      { name: 'Lightning Bolt', edition: 'Alpha', variation: '', is_foil: 'false', price_buy: '540.00', qty_buying: 3, url: 'mtg/alpha/lightning-bolt' },
+      { name: 'Odd "quoted} name', edition: 'X', variation: 'a{b', is_foil: 'true', price_buy: '1.00', qty_buying: 0 },
+    ],
+  });
+  for (const size of [1, 7, 50, doc.length]) {
+    const recs = [];
+    let m = null;
+    const feed = ck._createRecordScanner((r) => recs.push(r), (x) => (m = x));
+    for (let i = 0; i < doc.length; i += size) feed(doc.slice(i, i + size));
+    assert.equal(recs.length, 2, `chunk size ${size}`);
+    assert.equal(recs[1].name, 'Odd "quoted} name');
+    assert.equal(m.created_at, '2026-11-10 04:09:39');
+  }
+});

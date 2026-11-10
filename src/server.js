@@ -12,6 +12,7 @@ const express = require('express');
 const stores = require('./stores');
 const scryfall = require('./scryfall');
 const db = require('./db');
+const cardkingdom = require('./cardkingdom');
 const { TtlCache } = require('./util');
 
 const PORT = Number(process.env.PORT || 3000);
@@ -51,6 +52,7 @@ function rateLimit({ windowMs, max }) {
 const SEARCHES_PER_10_MIN = Number(process.env.SEARCHES_PER_10_MIN || 40);
 app.use('/api/prices', rateLimit({ windowMs: 10 * 60 * 1000, max: SEARCHES_PER_10_MIN * stores.list.length }));
 app.use('/api/autocomplete', rateLimit({ windowMs: 60 * 1000, max: 120 }));
+app.use('/api/cardkingdom', rateLimit({ windowMs: 10 * 60 * 1000, max: SEARCHES_PER_10_MIN }));
 
 app.get('/api/stores', (_req, res) => {
   res.json(stores.list.map(({ id, name, homepage }) => ({ id, name, homepage })));
@@ -83,6 +85,18 @@ app.get('/api/history', async (req, res) => {
     res.json({ enabled: true, days: await db.history(name, days) });
   } catch (err) {
     res.status(502).json({ enabled: true, days: [], error: err.message });
+  }
+});
+
+/** Card Kingdom buylist for every version of a card: GET /api/cardkingdom?name=Lightning%20Bolt */
+app.get('/api/cardkingdom', async (req, res) => {
+  const name = String(req.query.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'name is required' });
+  try {
+    res.json(await cardkingdom.buyPrices(name));
+  } catch (err) {
+    console.error(`[cardkingdom] ${name}: ${err.message}`);
+    res.status(502).json({ card: name, versions: [], error: err.message });
   }
 });
 

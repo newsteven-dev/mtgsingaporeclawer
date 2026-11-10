@@ -43,6 +43,25 @@
       <div id="summary" class="summary"></div>
     </section>
 
+    <section id="ck" hidden>
+      <div class="filters">
+        <h3>Card Kingdom buylist <span class="muted small">what Card Kingdom pays you, per version</span></h3>
+        <label><input type="checkbox" id="ck-buying" checked /> Only versions they're buying</label>
+        <label>Finish
+          <select id="ck-finish"><option value="">Any</option><option value="nonfoil">Non-foil</option><option value="foil">Foil</option></select>
+        </label>
+      </div>
+      <p id="ck-headline" class="ck-headline"></p>
+      <div class="table-wrap">
+        <table id="ck-table">
+          <thead><tr><th>Version</th><th>Finish</th><th>Cash</th><th>Store credit</th><th>CK wants</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="small"><button type="button" id="ck-more" class="ghost" hidden></button></p>
+      <p id="ck-note" class="muted small"></p>
+    </section>
+
     <section id="history" class="history" hidden>
       <div class="filters">
         <h3>Price history <span class="muted small">cheapest in-stock price per day</span></h3>

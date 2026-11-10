@@ -134,6 +134,8 @@
         renderCard();
       });
 
+    loadCardKingdom(name, token);
+
     // Query every store in parallel; each tile fills in as its store answers.
     await Promise.all(
       stores.map(async (s) => {
@@ -153,6 +155,124 @@
     loadHistory(name, token);
     loadTrending();
   }
+
+  /* ---------------- Card Kingdom buylist ---------------- */
+
+  let ck = null; // { status, data }
+  let ckShowAll = false;
+  const CK_PREVIEW_ROWS = 12;
+  const usd = (n) => (n == null ? '—' : `US$${Number(n).toFixed(2)}`);
+
+  async function loadCardKingdom(name, token) {
+    ck = { status: 'loading' };
+    ckShowAll = false;
+    renderCk();
+    try {
+      const res = await fetch(`/api/cardkingdom?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      if (token !== searchToken) return;
+      ck = { status: data.error ? 'error' : 'ok', data };
+    } catch (err) {
+      if (token !== searchToken) return;
+      ck = { status: 'error', data: { error: err.message, versions: [] } };
+    }
+    renderCk();
+  }
+
+  function cheapestLocal() {
+    let best = null;
+    for (const s of stores) {
+      const r = results[s.id];
+      if (r?.status !== 'ok') continue;
+      for (const l of r.data.listings) if (l.inStock && (!best || l.price < best.price)) best = { ...l, storeName: s.name };
+    }
+    return best;
+  }
+
+  const setKey = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').replace(/\b(edition|core set|the)\b/g, '').replace(/\s+/g, ' ').trim();
+
+  /** Card Kingdom's entry for the same set and finish as a shop listing, if the set names line up. */
+  function sameVersion(listing, versions) {
+    const want = setKey(listing.set);
+    if (!want) return null;
+    const candidates = versions.filter((v) => v.finish === listing.finish && setKey(v.edition) === want);
+    // Prefer the plain printing over special variations (borderless, showcase, ...).
+    return candidates.find((v) => !v.variation) || candidates[0] || null;
+  }
+
+  function renderCk() {
+    const section = $('#ck');
+    if (!ck) return (section.hidden = true);
+    section.hidden = false;
+    const tbody = $('#ck-table tbody');
+    const headline = $('#ck-headline');
+    const more = $('#ck-more');
+    if (ck.status === 'loading') {
+      headline.innerHTML = '<span class="muted">Loading Card Kingdom buy prices…</span>';
+      tbody.innerHTML = '';
+      more.hidden = true;
+      return;
+    }
+    if (ck.status === 'error') {
+      headline.innerHTML = `<span class="muted">Couldn't load Card Kingdom prices: ${esc(ck.data.error)}</span>`;
+      tbody.innerHTML = '';
+      more.hidden = true;
+      return;
+    }
+
+    const d = ck.data;
+    const onlyBuying = $('#ck-buying').checked;
+    const finish = $('#ck-finish').value;
+    const rows = d.versions.filter((v) => (!onlyBuying || v.buying) && (!finish || v.finish === finish));
+    const shown = ckShowAll ? rows : rows.slice(0, CK_PREVIEW_ROWS);
+
+    const top = d.versions.find((v) => v.buying);
+    const local = cheapestLocal();
+    if (!d.versions.length) {
+      headline.innerHTML = `Card Kingdom doesn't list this card. <a href="${esc(d.buylistUrl)}" target="_blank" rel="noopener">Check their buylist ↗</a>`;
+    } else if (!top) {
+      headline.innerHTML = `Card Kingdom isn't buying any version of this card right now.`;
+    } else {
+      const version = [top.edition, top.variation].filter(Boolean).join(' · ');
+      const same = local && sameVersion(local, d.versions);
+      headline.innerHTML = `Card Kingdom's highest offer is <strong>${top.buySgd != null ? money(top.buySgd) : usd(top.buyUsd)}</strong> cash
+        (${usd(top.buyUsd)}) for <strong>${esc(version)}</strong>${top.finish === 'foil' ? ' (foil)' : ''}.` +
+        (same
+          ? `<br>The cheapest copy in Singapore is <strong>${money(local.price)}</strong> (${esc(local.set)}${local.finish === 'foil' ? ', foil' : ''}, ${esc(local.condition || 'NM')}) at ${esc(local.storeName)};
+             Card Kingdom pays <strong>${same.buySgd != null ? money(same.buySgd) : usd(same.buyUsd)}</strong> for that printing${same.buying ? '' : ', but isn’t buying it right now'}.`
+          : '');
+    }
+
+    tbody.innerHTML = shown.length
+      ? shown
+          .map(
+            (v) => `<tr class="${v.buying ? '' : 'oos'}">
+          <td class="title">${esc(v.edition)}${v.variation ? `<span class="set">${esc(v.variation)}</span>` : ''}</td>
+          <td>${v.finish === 'foil' ? '<span class="foil">Foil</span>' : 'Non-foil'}</td>
+          <td class="price">${v.buySgd != null ? money(v.buySgd) : usd(v.buyUsd)}<span class="usd">${usd(v.buyUsd)}</span></td>
+          <td class="price">${v.creditSgd != null ? money(v.creditSgd) : usd(v.creditUsd)}<span class="usd">${usd(v.creditUsd)}</span></td>
+          <td>${v.buying ? esc(v.qtyBuying) : 'Not buying'}</td>
+          <td>${v.url ? `<a href="${esc(v.url)}" target="_blank" rel="noopener">View ↗</a>` : ''}</td>
+        </tr>`,
+          )
+          .join('')
+      : `<tr><td colspan="6" class="muted">No versions match.</td></tr>`;
+
+    more.hidden = rows.length <= CK_PREVIEW_ROWS;
+    more.textContent = ckShowAll ? 'Show fewer' : `Show all ${rows.length} versions`;
+
+    const rate = d.usdSgd ? `Converted at US$1 = S$${Number(d.usdSgd).toFixed(4)}${d.usdSgdDate && d.usdSgdDate !== 'fixed' ? ` (${d.usdSgdDate})` : ''}. ` : '';
+    $('#ck-note').innerHTML = `Buy prices are for Near Mint copies; Card Kingdom pays less for played cards, and you pay shipping to the US.
+      Store credit is ${Math.round((d.creditBonus || 0) * 100)}% more than cash. ${rate}
+      ${d.priceListDate ? `Card Kingdom price list from ${esc(d.priceListDate)} (US Eastern). ` : ''}
+      <a href="${esc(d.buylistUrl)}" target="_blank" rel="noopener">Open Card Kingdom buylist ↗</a>`;
+  }
+
+  ['#ck-buying', '#ck-finish'].forEach((sel) => $(sel).addEventListener('change', renderCk));
+  $('#ck-more').addEventListener('click', () => {
+    ckShowAll = !ckShowAll;
+    renderCk();
+  });
 
   /* ---------------- Price history (Supabase) ---------------- */
 
@@ -430,6 +550,7 @@
           )
           .join('')
       : `<tr><td colspan="7" class="muted">${Object.values(results).some((r) => r.status === 'loading') ? 'Searching stores…' : 'No listings match.'}</td></tr>`;
+    if (ck && ck.status === 'ok') renderCk(); // keep the "cheapest in Singapore" comparison current
   }
 
   ['#f-stock', '#f-finish', '#f-cond'].forEach((sel) => $(sel).addEventListener('change', render));

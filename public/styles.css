@@ -166,6 +166,11 @@ tr:last-child td { border-bottom: 0; }
 .tip em { font-style: normal; font-variant-numeric: tabular-nums; font-weight: 600; }
 #h-table { margin-top: 4px; max-height: 320px; overflow: auto; }
 
+.ck-headline { margin: 0 0 10px; }
+.ck-headline strong { font-variant-numeric: tabular-nums; }
+#ck-table td.title { min-width: 200px; }
+#ck-table .usd { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+
 @media (max-width: 600px) {
   .search { flex-direction: column; }
   .search button { padding: 12px; }

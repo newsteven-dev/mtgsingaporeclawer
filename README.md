@@ -28,6 +28,21 @@ npm start
 
 Then open http://localhost:3000. Add `?card=Lightning%20Bolt` to the URL to link straight to a card.
 
+## Card Kingdom buylist
+
+Each card page also shows what [Card Kingdom](https://www.cardkingdom.com/purchasing/mtg_singles) pays for every
+version of the card (edition, variation, foil or non-foil): cash, store credit (30% more), and how many they want.
+Versions Card Kingdom isn't buying right now are hidden by default.
+
+- Prices come from Card Kingdom's public daily price list (`api.cardkingdom.com/api/pricelist`, about 48 MB).
+  The server streams it once, keeps a slim copy in memory (about 170 MB of RAM), and refreshes it every 6 hours.
+  The first Card Kingdom lookup after the server starts takes a few seconds.
+- USD prices are converted to SGD with the daily rate from [Frankfurter](https://frankfurter.dev).
+  Set `USD_SGD_RATE` to use a fixed rate instead.
+- The headline compares Card Kingdom's offer for the same printing as the cheapest copy in Singapore,
+  when the set names match.
+- Buy prices are for Near Mint cards. Card Kingdom pays less for played cards, and you pay shipping to the US.
+
 ## Price history (Supabase)
 
 Every fresh price check is saved to Supabase, so the app can chart how each store's cheapest
@@ -88,6 +103,7 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/autocomplete?q=bolt` | Card-name suggestions (Scryfall) |
 | `GET /api/card?name=Lightning%20Bolt` | Card details (Scryfall) |
 | `GET /api/prices?store=agora&name=Lightning%20Bolt[&refresh=1]` | Listings at one store (fresh results are saved to Supabase) |
+| `GET /api/cardkingdom?name=Lightning%20Bolt` | Card Kingdom buy prices for every version |
 | `GET /api/history?name=Lightning%20Bolt&days=90` | Daily cheapest price per store |
 | `GET /api/trending` | Recently tracked cards with price change vs 7 days ago |
 
@@ -102,6 +118,8 @@ Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`.
 | `SUPABASE_SECRET_KEY` | none | Supabase secret or service_role key, server only |
 | `CACHE_MINUTES` | `10` | How long price results are cached |
 | `SEARCHES_PER_10_MIN` | `40` | Card searches allowed per visitor every 10 minutes |
+| `USD_SGD_RATE` | daily rate | Fixed USD to SGD rate for Card Kingdom prices |
+| `CK_CREDIT_BONUS` | `0.3` | Card Kingdom's store-credit bonus over cash |
 | `TCG_API_URL` | `https://thetcgmarketplace.com:3501/` | TCG Marketplace API base |
 | `TCG_MTG_CATEGORY_ID` | auto-detected | Skip the category lookup |
 | `MTGASIA_APP_ID` | value from the site | MTG Asia storefront app id |
