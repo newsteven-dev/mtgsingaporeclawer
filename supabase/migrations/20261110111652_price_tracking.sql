@@ -1,4 +1,4 @@
--- Price history for searched cards. Applied to the Supabase project as migration "price_tracking".
+-- Price history for searched cards (applied as migration "price_tracking").
 
 -- One row per (card, store) price check.
 create table public.price_snapshots (
