@@ -127,3 +127,19 @@ test('card kingdom streaming scanner handles records split across chunks', () =>
     assert.equal(m.created_at, '2026-11-10 04:09:39');
   }
 });
+
+test('tcg marketplace parser accepts alternate field names and skips price-less suggestion rows', () => {
+  const rows = tcg._parseResults(
+    [
+      { id: 1, name: 'Lightning Bolt', type: 1 }, // suggestion-style row: no price
+      { id: 2, name: 'Lightning Bolt', set_name: 'Masters 25', min_price: '3.10', quantity: 2, crd_foil: 1 },
+      { id: 3, card_name: 'Chain Lightning', lowest_price: '9' },
+      { name: 'No results', type: 0, id: 0 },
+    ],
+    'Lightning Bolt',
+  );
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].price, 3.1);
+  assert.equal(rows[0].stock, 2);
+  assert.equal(rows[0].finish, 'foil');
+});

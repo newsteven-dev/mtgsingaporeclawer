@@ -66,6 +66,32 @@ The database schema is in `supabase/migrations/` and is already applied to the p
 All tables have Row Level Security turned on with no public policies, so only the server's secret key can read or write them.
 Results are cached for 10 minutes, so a card searched repeatedly is saved at most once per store every 10 minutes.
 
+## Sign in with GitHub: captured searches
+
+`/login.html` signs you in with your GitHub account (through Supabase Auth). Once signed in,
+`/searches.html` shows every search captured so far: a list of cards tracked, and a search log where
+each row expands to show what every store had at that moment (in-stock count, cheapest prices and listings).
+There's also a **Captured searches** link at the top of the main page.
+
+Only GitHub accounts listed in `ADMIN_GITHUB_USERS` (default `newsteven-dev`) can see this data. The server
+checks every request with Supabase, so another GitHub user who signs in just sees "not allowed".
+
+### One-time setup
+
+1. **Create a GitHub OAuth app.** On GitHub go to **Settings → Developer settings → OAuth Apps → New OAuth App**.
+   - Application name: `MTG SG Price Compare`
+   - Homepage URL: your site, e.g. `https://mtg-sg-price-compare.onrender.com`
+   - Authorization callback URL: `https://dlkknzbftscwktzzpwcn.supabase.co/auth/v1/callback`
+
+   Click **Register application**, then **Generate a new client secret**. Keep the Client ID and the secret.
+2. **Turn on GitHub in Supabase.** In the Supabase dashboard open **Authentication → Sign In / Providers → GitHub**,
+   switch it on, paste the Client ID and Client Secret, and save.
+3. **Allow the redirect back to the app.** In **Authentication → URL Configuration**, set **Site URL** to your site,
+   and add these under **Redirect URLs**:
+   - `https://mtg-sg-price-compare.onrender.com/**` (your Render address)
+   - `http://localhost:3000/**` (for running it on your computer)
+4. Make sure the server has `SUPABASE_PUBLISHABLE_KEY` set. It's already in `render.yaml` and `.env.example`.
+
 ## Put it on the internet (Render)
 
 The repo includes a `render.yaml`, so [Render](https://render.com) can set everything up from it.
@@ -106,6 +132,9 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/cardkingdom?name=Lightning%20Bolt` | Card Kingdom buy prices for every version |
 | `GET /api/history?name=Lightning%20Bolt&days=90` | Daily cheapest price per store |
 | `GET /api/trending` | Recently tracked cards with price change vs 7 days ago |
+| `GET /api/config` | Public sign-in settings (Supabase URL and publishable key) |
+| `GET /api/admin/searches?q=&limit=&offset=` | Captured searches and cards (signed-in allowlisted user only) |
+| `GET /api/admin/snapshots?ids=1,2` | Store snapshots and listings for one search (signed-in allowlisted user only) |
 
 Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`.
 
@@ -116,6 +145,8 @@ Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`.
 | `PORT` | `3000` | HTTP port |
 | `SUPABASE_URL` | none | Supabase project URL (turns on price history) |
 | `SUPABASE_SECRET_KEY` | none | Supabase secret or service_role key, server only |
+| `SUPABASE_PUBLISHABLE_KEY` | none | Supabase publishable key, used by the GitHub sign-in page |
+| `ADMIN_GITHUB_USERS` | `newsteven-dev` | GitHub usernames allowed to see captured searches (comma-separated) |
 | `CACHE_MINUTES` | `10` | How long price results are cached |
 | `SEARCHES_PER_10_MIN` | `40` | Card searches allowed per visitor every 10 minutes |
 | `USD_SGD_RATE` | daily rate | Fixed USD to SGD rate for Card Kingdom prices |

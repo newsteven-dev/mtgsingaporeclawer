@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Captured searches · MTG SG Price Compare</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="/vendor/supabase.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap admin-head">
+      <div>
+        <h1>Captured searches</h1>
+        <p class="sub">Every card searched in the app, and what each store had at the time.</p>
+      </div>
+      <div class="who" id="who" hidden>
+        <img id="avatar" alt="" />
+        <span id="login"></span>
+        <button type="button" id="signout" class="ghost">Sign out</button>
+      </div>
+    </div>
+    <div class="wrap"><a href="/">← Back to price search</a></div>
+  </header>
+
+  <main class="wrap">
+    <p id="state" class="muted">Checking your sign-in…</p>
+
+    <div id="content" hidden>
+      <div class="stats" id="stats"></div>
+
+      <section>
+        <div class="filters">
+          <h3>Cards</h3>
+          <input id="q" type="search" placeholder="Filter by card name" class="filter-input" />
+        </div>
+        <div class="table-wrap">
+          <table id="cards">
+            <thead><tr><th>Card</th><th>Searches</th><th class="opt">First searched</th><th class="opt">Last searched</th><th>Cheapest (24h)</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <div class="filters"><h3>Search log <span id="log-count" class="muted small"></span></h3></div>
+        <div class="table-wrap">
+          <table id="log">
+            <thead><tr><th>When (SGT)</th><th>Card</th><th class="opt">Stores</th><th>Cheapest</th><th class="opt">In-stock listings</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p><button type="button" id="more" class="ghost" hidden>Load older searches</button></p>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="searches.js"></script>
+</body>
+</html>

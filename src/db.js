@@ -71,4 +71,39 @@ async function trending(limit = 12) {
   return rest(`trending_cards?${q}`);
 }
 
-module.exports = { enabled, recordSnapshot, history, trending };
+/* ---------- Signed-in "captured searches" page ---------- */
+
+/** Escape a value for a PostgREST ilike filter. */
+const likeValue = (s) => `*${String(s).replace(/[*,()]/g, ' ').trim()}*`;
+
+/** Searches, newest first. Each row groups the store checks made together for one card. */
+async function searchEvents({ limit = 50, offset = 0, q = '' } = {}) {
+  if (!enabled) return [];
+  const params = new URLSearchParams({
+    select: 'card_name,searched_at,stores_checked,stores,snapshot_ids,in_stock_listings,cheapest,cheapest_store',
+    order: 'searched_at.desc',
+    limit: String(limit),
+    offset: String(offset),
+  });
+  if (q) params.set('card_name', `ilike.${likeValue(q)}`);
+  return rest(`search_events?${params}`);
+}
+
+/** Every card searched so far, most recent first. */
+async function capturedCards() {
+  if (!enabled) return [];
+  return rest('captured_cards?select=card_name,searches,first_searched,last_searched,cheapest_last_24h&order=last_searched.desc&limit=1000');
+}
+
+/** Store snapshots with their in-stock listings, for one search's detail view. */
+async function snapshotsWithListings(ids) {
+  if (!enabled || !ids.length) return [];
+  const params = new URLSearchParams({
+    select: 'id,store,captured_at,listing_count,in_stock_count,min_price,min_price_nonfoil,min_price_foil,price_listings(title,set_name,set_code,condition,finish,price,stock,url)',
+    id: `in.(${ids.join(',')})`,
+    order: 'store.asc',
+  });
+  return rest(`price_snapshots?${params}`);
+}
+
+module.exports = { enabled, recordSnapshot, history, trending, searchEvents, capturedCards, snapshotsWithListings };
