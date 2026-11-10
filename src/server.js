@@ -13,6 +13,7 @@ const stores = require('./stores');
 const scryfall = require('./scryfall');
 const db = require('./db');
 const cardkingdom = require('./cardkingdom');
+const auth = require('./auth');
 const { TtlCache } = require('./util');
 
 const PORT = Number(process.env.PORT || 3000);
@@ -26,6 +27,10 @@ app.disable('x-powered-by');
 // Behind a host's load balancer (Render, Railway, ...), take the client IP from X-Forwarded-For.
 app.set('trust proxy', 1);
 app.use(express.static(path.join(__dirname, '..', 'public')));
+// Browser build of supabase-js for the login pages, served from node_modules (no CDN needed).
+app.get('/vendor/supabase.js', (_req, res) =>
+  res.sendFile(require.resolve('@supabase/supabase-js/dist/umd/supabase.js'), { maxAge: '1d' }),
+);
 
 /**
  * Simple per-IP limit so a public deployment can't be used to hammer the shops
@@ -97,6 +102,39 @@ app.get('/api/cardkingdom', async (req, res) => {
   } catch (err) {
     console.error(`[cardkingdom] ${name}: ${err.message}`);
     res.status(502).json({ card: name, versions: [], error: err.message });
+  }
+});
+
+/* ---------- Sign-in (GitHub via Supabase Auth) and captured searches ---------- */
+
+/** Public settings the login page needs. The publishable key is designed to be public. */
+app.get('/api/config', (_req, res) => res.json(auth.publicConfig()));
+
+app.get('/api/admin/me', auth.requireAdmin, (req, res) => res.json({ user: req.user }));
+
+app.get('/api/admin/searches', auth.requireAdmin, async (req, res) => {
+  const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  const q = String(req.query.q || '').slice(0, 100);
+  try {
+    const [searches, cards] = await Promise.all([db.searchEvents({ limit, offset, q }), offset ? null : db.capturedCards()]);
+    res.json({ searches, cards, limit, offset });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/snapshots', auth.requireAdmin, async (req, res) => {
+  const ids = String(req.query.ids || '')
+    .split(',')
+    .map((s) => Number(s))
+    .filter((n) => Number.isInteger(n) && n > 0)
+    .slice(0, 20);
+  if (!ids.length) return res.status(400).json({ error: 'ids is required' });
+  try {
+    res.json({ snapshots: await db.snapshotsWithListings(ids) });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
   }
 });
 

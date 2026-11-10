@@ -15,6 +15,12 @@ services:
         value: "22"
       - key: SUPABASE_URL
         value: https://dlkknzbftscwktzzpwcn.supabase.co
+      # Public key used by the login page (safe to share).
+      - key: SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_8woD8kF7r_4q7Az_OfiV_g_dj6bdkeE
+      # GitHub usernames allowed to see captured searches (comma-separated).
+      - key: ADMIN_GITHUB_USERS
+        value: newsteven-dev
       # Secret: Render asks for this value when you create the service. Never commit it.
       - key: SUPABASE_SECRET_KEY
         sync: false

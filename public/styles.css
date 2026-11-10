@@ -171,7 +171,44 @@ tr:last-child td { border-bottom: 0; }
 #ck-table td.title { min-width: 200px; }
 #ck-table .usd { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
 
+/* Login + captured searches */
+.top-link { float: right; font-size: 14px; margin-top: 6px; }
+.auth-page { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.login-card {
+  width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px; box-shadow: var(--shadow); text-align: center;
+}
+.login-card h1 { font-size: 22px; margin: 0 0 6px; }
+.github-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  padding: 12px 16px; margin: 18px 0 8px; background: #24292f; color: #fff; font-size: 16px;
+}
+@media (prefers-color-scheme: dark) { .github-btn { background: #f0f2f4; color: #1f2328; } }
+.github-btn:disabled { opacity: .6; cursor: default; }
+.login-msg { color: var(--accent); font-size: 14px; }
+.admin-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.who { display: flex; align-items: center; gap: 10px; }
+.who img { width: 32px; height: 32px; border-radius: 50%; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 20px 0 28px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 2px; }
+.stat-n { font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
+.filter-input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); min-width: 200px; }
+.details-btn { padding: 4px 10px; font-size: 13px; }
+.detail-row td { background: var(--bg); white-space: normal; }
+.snap { padding: 8px 0; border-bottom: 1px dashed var(--border); }
+.snap:last-child { border-bottom: 0; }
+.snap-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.snap-list { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+.snap-list .price { font-weight: 700; font-variant-numeric: tabular-nums; }
+code { font-size: 13px; }
+
 @media (max-width: 600px) {
+  table .opt { display: none; }
+  #log th, #log td, #cards th, #cards td { white-space: normal; padding: 8px 6px; }
+  #log th:first-child, #log td:first-child, #cards th:first-child, #cards td:first-child { padding-left: 10px; }
+  #log td.title, #cards td.title { min-width: 0; }
+  .detail-row td { padding: 8px; }
+  .snap-list { padding-left: 14px; }
   .search { flex-direction: column; }
   .search button { padding: 12px; }
   .card-head img { width: 110px; }
