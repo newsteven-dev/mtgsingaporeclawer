@@ -53,8 +53,8 @@
 
     <section id="ck" hidden>
       <div class="filters">
-        <h3>Card Kingdom buylist <span class="muted small">what Card Kingdom pays you, per version</span></h3>
-        <label><input type="checkbox" id="ck-buying" checked /> Only versions they're buying</label>
+        <h3>Card Kingdom prices <span class="muted small">what Card Kingdom sells each version for</span></h3>
+        <label><input type="checkbox" id="ck-instock" checked /> In stock only</label>
         <label>Finish
           <select id="ck-finish"><option value="">Any</option><option value="nonfoil">Non-foil</option><option value="foil">Foil</option></select>
         </label>
@@ -62,7 +62,7 @@
       <p id="ck-headline" class="ck-headline"></p>
       <div class="table-wrap">
         <table id="ck-table">
-          <thead><tr><th>Version</th><th>Finish</th><th>Cash</th><th>Store credit</th><th>CK wants</th><th></th></tr></thead>
+          <thead><tr><th>Version</th><th>Finish</th><th>From</th><th class="opt">NM</th><th class="opt">EX <span class="eq">≈LP</span></th><th class="opt">VG <span class="eq">≈MP</span></th><th class="opt">G <span class="eq">≈HP</span></th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
