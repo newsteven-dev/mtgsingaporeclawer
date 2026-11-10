@@ -81,7 +81,7 @@ app.get('/api/card', async (req, res) => {
 });
 
 /** Daily cheapest price per store: GET /api/history?name=Lightning%20Bolt&days=90 */
-app.get('/api/history', async (req, res) => {
+app.get('/api/history', auth.requireAdmin, async (req, res) => {
   if (!db.enabled) return res.json({ enabled: false, days: [] });
   const name = String(req.query.name || '').trim();
   if (!name) return res.status(400).json({ error: 'name is required' });
@@ -139,7 +139,7 @@ app.get('/api/admin/snapshots', auth.requireAdmin, async (req, res) => {
 });
 
 /** Recently searched cards: GET /api/trending */
-app.get('/api/trending', async (_req, res) => {
+app.get('/api/trending', auth.requireAdmin, async (_req, res) => {
   if (!db.enabled) return res.json({ enabled: false, cards: [] });
   try {
     res.json({ enabled: true, cards: await db.trending() });

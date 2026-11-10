@@ -72,7 +72,10 @@ Results are cached for 10 minutes, so a card searched repeatedly is saved at mos
 `/login.html` signs you in with your GitHub account (through Supabase Auth). Once signed in,
 `/searches.html` shows every search captured so far: a list of cards tracked, and a search log where
 each row expands to show what every store had at that moment (in-stock count, cheapest prices and listings).
-There's also a **Captured searches** link at the top of the main page.
+The main page has no visible sign-in button: go to `/login.html` directly. Once you are signed in, the top-right corner
+shows **Captured searches** and **Log out**, and the main page also shows **Recently tracked cards** and each card's
+**Price history**. Signed out, those stay hidden (the server refuses that data without a valid sign-in), while the live
+price comparison keeps working for everyone.
 
 Only GitHub accounts listed in `ADMIN_GITHUB_USERS` (default `newsteven-dev`) can see this data. The server
 checks every request with Supabase, so another GitHub user who signs in just sees "not allowed".
@@ -131,8 +134,8 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/card?name=Lightning%20Bolt` | Card details (Scryfall) |
 | `GET /api/prices?store=agora&name=Lightning%20Bolt[&refresh=1]` | Listings at one store (fresh results are saved to Supabase) |
 | `GET /api/cardkingdom?name=Lightning%20Bolt` | Card Kingdom retail prices and stock for every version and condition |
-| `GET /api/history?name=Lightning%20Bolt&days=90` | Daily cheapest price per store |
-| `GET /api/trending` | Recently tracked cards with price change vs 7 days ago |
+| `GET /api/history?name=Lightning%20Bolt&days=90` | Daily cheapest price per store (signed-in allowlisted user only) |
+| `GET /api/trending` | Recently tracked cards with price change vs 7 days ago (signed-in allowlisted user only) |
 | `GET /api/config` | Public sign-in settings (Supabase URL and publishable key) |
 | `GET /api/admin/searches?q=&limit=&offset=` | Captured searches and cards (signed-in allowlisted user only) |
 | `GET /api/admin/snapshots?ids=1,2` | Store snapshots and listings for one search (signed-in allowlisted user only) |

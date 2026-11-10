@@ -37,8 +37,11 @@ export async function getSession() {
   return data.session;
 }
 
-export async function signOut() {
+export async function signOut(redirectTo = '/login.html') {
   const supabase = await getClient();
-  if (supabase) await supabase.auth.signOut();
-  location.href = '/login.html';
+  try {
+    if (supabase) await supabase.auth.signOut();
+  } finally {
+    location.href = redirectTo;
+  }
 }
