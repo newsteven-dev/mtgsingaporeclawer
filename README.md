@@ -16,7 +16,7 @@ Card-name autocomplete and card details (image, type line, USD reference price) 
 
 ## Run it
 
-Requires Node.js 18 or newer.
+Requires Node.js 20.12 or newer.
 
 ```bash
 npm install
@@ -27,6 +27,29 @@ npm start
 ```
 
 Then open http://localhost:3000. Add `?card=Lightning%20Bolt` to the URL to link straight to a card.
+
+## Price history (Supabase)
+
+Every fresh price check is saved to Supabase, so the app can chart how each store's cheapest
+in-stock price for a card changes over time and list recently tracked cards on the home page.
+
+1. Copy `.env.example` to `.env`.
+2. In the Supabase dashboard for the `mtgsingaporeclawer` project, open **Project Settings → API Keys**,
+   create or copy a **secret key** (`sb_secret_...`) and paste it as `SUPABASE_SECRET_KEY`.
+3. Restart the app. The console prints `Price history: saving to Supabase`.
+
+The secret key stays on the server and is never sent to the browser. Without it the app still
+works; price history is just turned off.
+
+The database schema is in `supabase/migrations/` and is already applied to the project:
+
+- `price_snapshots`: one row per card and store check, with the cheapest in-stock price overall, non-foil and foil.
+- `price_listings`: the in-stock listings captured with each snapshot.
+- `card_price_daily` (view): the cheapest price per card, store and day (Singapore time).
+- `trending_cards` (view): cards checked in the last 30 days, with the cheapest price now and 7 days ago.
+
+All tables have Row Level Security turned on with no public policies, so only the server's secret key can read or write them.
+Results are cached for 10 minutes, so a card searched repeatedly is saved at most once per store every 10 minutes.
 
 ## How it works
 
@@ -44,7 +67,9 @@ Then open http://localhost:3000. Add `?card=Lightning%20Bolt` to the URL to link
 | `GET /api/stores` | Configured stores |
 | `GET /api/autocomplete?q=bolt` | Card-name suggestions (Scryfall) |
 | `GET /api/card?name=Lightning%20Bolt` | Card details (Scryfall) |
-| `GET /api/prices?store=agora&name=Lightning%20Bolt[&refresh=1]` | Listings at one store |
+| `GET /api/prices?store=agora&name=Lightning%20Bolt[&refresh=1]` | Listings at one store (fresh results are saved to Supabase) |
+| `GET /api/history?name=Lightning%20Bolt&days=90` | Daily cheapest price per store |
+| `GET /api/trending` | Recently tracked cards with price change vs 7 days ago |
 
 Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`.
 
@@ -53,6 +78,8 @@ Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `3000` | HTTP port |
+| `SUPABASE_URL` | none | Supabase project URL (turns on price history) |
+| `SUPABASE_SECRET_KEY` | none | Supabase secret or service_role key, server only |
 | `CACHE_MINUTES` | `10` | How long price results are cached |
 | `TCG_API_URL` | `https://thetcgmarketplace.com:3501/` | TCG Marketplace API base |
 | `TCG_MTG_CATEGORY_ID` | auto-detected | Skip the category lookup |
