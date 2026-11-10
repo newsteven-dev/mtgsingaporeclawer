@@ -124,6 +124,20 @@ app.get('/api/admin/searches', auth.requireAdmin, async (req, res) => {
   }
 });
 
+/** Top 20 searched cards: GET /api/admin/top?period=day|month[&start=YYYY-MM-DD] (defaults to the latest period). */
+app.get('/api/admin/top', auth.requireAdmin, async (req, res) => {
+  const period = req.query.period === 'month' ? 'month' : 'day';
+  try {
+    const periods = await db.searchPeriods(period);
+    let start = String(req.query.start || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) start = periods[0] ? periods[0].period : null;
+    const cards = start ? await db.topSearchedCards(period, start, 20) : [];
+    res.json({ period, start, periods, cards });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
 app.get('/api/admin/snapshots', auth.requireAdmin, async (req, res) => {
   const ids = String(req.query.ids || '')
     .split(',')

@@ -13,10 +13,16 @@ const { http } = require('./util');
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 // Public "publishable" key: safe to send to the browser.
 const PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || '';
-const ALLOWED = (process.env.ADMIN_GITHUB_USERS || 'newsteven-dev')
-  .split(',')
-  .map((s) => s.trim().toLowerCase())
-  .filter(Boolean);
+const list = (v) =>
+  String(v || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+// Who may see captured searches. When ADMIN_EMAILS is set, only GitHub accounts whose
+// verified email is in it get in (and ADMIN_GITHUB_USERS is ignored). Otherwise the
+// GitHub usernames in ADMIN_GITHUB_USERS decide.
+const ALLOWED_EMAILS = list(process.env.ADMIN_EMAILS);
+const ALLOWED = list(process.env.ADMIN_GITHUB_USERS || 'newsteven-dev');
 
 const enabled = Boolean(SUPABASE_URL && PUBLISHABLE_KEY);
 const cache = new Map(); // token -> { user, expires }
@@ -50,6 +56,8 @@ async function userFromToken(token) {
       name: meta.full_name || meta.name || meta.user_name || '',
       avatar: meta.avatar_url || null,
       provider: (u.app_metadata && u.app_metadata.provider) || '',
+      email: String(u.email || '').toLowerCase(),
+      emailVerified: Boolean(u.email_confirmed_at || u.confirmed_at),
     };
   } catch (err) {
     if (err.status !== 401 && err.status !== 403) throw err;
@@ -57,6 +65,12 @@ async function userFromToken(token) {
   cache.set(token, { user, expires: Date.now() + 60 * 1000 });
   if (cache.size > 200) cache.delete(cache.keys().next().value);
   return user;
+}
+
+function isAllowed(user) {
+  if (user.provider !== 'github') return false;
+  if (ALLOWED_EMAILS.length) return user.emailVerified && ALLOWED_EMAILS.includes(user.email);
+  return ALLOWED.includes(user.login);
 }
 
 /** Express middleware: requires a signed-in GitHub user on the allowlist. */
@@ -67,10 +81,13 @@ function requireAdmin(req, res, next) {
   userFromToken(m[1])
     .then((user) => {
       if (!user) return res.status(401).json({ error: 'Your session has expired. Please sign in again.' });
-      if (user.provider !== 'github' || !ALLOWED.includes(user.login)) {
-        return res.status(403).json({ error: `GitHub account "${user.login || 'unknown'}" isn't allowed to view captured searches.`, user });
+      if (!isAllowed(user)) {
+        return res.status(403).json({
+          error: `GitHub account "${user.login || 'unknown'}" isn't allowed to view captured searches.`,
+          user: { login: user.login, name: user.name, avatar: user.avatar },
+        });
       }
-      req.user = user;
+      req.user = { id: user.id, login: user.login, name: user.name, avatar: user.avatar };
       next();
     })
     .catch((err) => res.status(502).json({ error: `Couldn't check your sign-in: ${err.message}` }));

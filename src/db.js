@@ -106,4 +106,26 @@ async function snapshotsWithListings(ids) {
   return rest(`price_snapshots?${params}`);
 }
 
-module.exports = { enabled, recordSnapshot, history, trending, searchEvents, capturedCards, snapshotsWithListings };
+/** Days or months that have searches, newest first, with search and card counts. */
+async function searchPeriods(period) {
+  if (!enabled) return [];
+  return rest('rpc/search_periods', { method: 'POST', body: JSON.stringify({ p_period: period }) });
+}
+
+/** Most searched cards in one day or month (Singapore time). */
+async function topSearchedCards(period, start, limit = 20) {
+  if (!enabled) return [];
+  return rest('rpc/top_searched_cards', { method: 'POST', body: JSON.stringify({ p_period: period, p_start: start, p_limit: limit }) });
+}
+
+module.exports = {
+  enabled,
+  recordSnapshot,
+  history,
+  trending,
+  searchEvents,
+  capturedCards,
+  snapshotsWithListings,
+  searchPeriods,
+  topSearchedCards,
+};

@@ -66,6 +66,7 @@ async function load(reset) {
     if (data.cards) {
       allCards = data.cards;
       renderStats();
+      if (!topData) loadTop();
       renderCards();
     }
     renderLog(data.searches, reset);
@@ -176,5 +177,115 @@ $('#q').addEventListener('input', (e) => {
 });
 $('#more').addEventListener('click', () => load(false));
 $('#signout').addEventListener('click', signOut);
+
+/* ---------------- Top searches (per day / per month) ---------------- */
+
+let topPeriod = 'day';
+let topData = null;
+
+const periodLabel = (period, d) =>
+  new Date(`${d}T00:00:00`).toLocaleDateString('en-SG', period === 'month' ? { month: 'long', year: 'numeric' } : { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
+async function loadTop(start) {
+  try {
+    const q = new URLSearchParams({ period: topPeriod });
+    if (start) q.set('start', start);
+    topData = await api(`/api/admin/top?${q}`);
+    renderTop();
+  } catch (err) {
+    $('#top-chart').innerHTML = `<p class="muted">Couldn't load top searches: ${esc(err.message)}</p>`;
+  }
+}
+
+function renderTop() {
+  const d = topData;
+  const sel = $('#top-start');
+  sel.innerHTML = d.periods
+    .map((p) => `<option value="${esc(p.period)}" ${p.period === d.start ? 'selected' : ''}>${esc(periodLabel(d.period, p.period))} · ${esc(p.searches)} searches</option>`)
+    .join('');
+  sel.hidden = !d.periods.length;
+  const current = d.periods.find((p) => p.period === d.start);
+  $('#top-sub').textContent = current
+    ? `${current.searches} searches of ${current.cards} cards in ${periodLabel(d.period, d.start)}`
+    : '';
+
+  const showTable = $('#top-view').getAttribute('aria-pressed') === 'true';
+  $('#top-chart').hidden = showTable;
+  $('#top-table').hidden = !showTable;
+  $('#top-note').textContent = d.cards.length
+    ? `Top ${d.cards.length} by number of searches${d.cards.length === 20 ? ' (top 20 shown)' : ''}. A search is one look-up of a card across the stores. Times are Singapore time.`
+    : '';
+
+  if (!d.cards.length) {
+    $('#top-chart').innerHTML = '<p class="muted">No searches in this period yet.</p>';
+    $('#top-table').innerHTML = '';
+    return;
+  }
+
+  const max = Math.max(...d.cards.map((c) => Number(c.searches)));
+  $('#top-chart').innerHTML = d.cards
+    .map(
+      (c, i) => `<a class="bar-row" role="listitem" data-i="${i}" href="/?card=${encodeURIComponent(c.card_name)}"
+        aria-label="${esc(c.card_name)}: ${esc(c.searches)} searches">
+        <span class="bar-rank">${i + 1}</span>
+        <span class="bar-name">${esc(c.card_name)}</span>
+        <span class="bar-track"><span class="bar-fill" style="width:${Math.max(2, (Number(c.searches) / max) * 100)}%"></span></span>
+        <span class="bar-value">${esc(c.searches)}</span>
+      </a>`,
+    )
+    .join('');
+
+  $('#top-table').innerHTML = `<table><thead><tr><th>#</th><th>Card</th><th>Searches</th><th>Last searched</th><th>Cheapest seen</th><th></th></tr></thead><tbody>${d.cards
+    .map(
+      (c, i) => `<tr><td>${i + 1}</td><td class="title">${esc(c.card_name)}</td><td>${esc(c.searches)}</td>
+        <td>${when(c.last_searched)}</td><td class="price">${money(c.cheapest)}</td>
+        <td><a href="/?card=${encodeURIComponent(c.card_name)}">Search now ↗</a></td></tr>`,
+    )
+    .join('')}</tbody></table>`;
+}
+
+// Hover tooltip for the bars (the whole row is the hit target).
+const topChart = $('#top-chart');
+const tip = $('#top-tip');
+function showTip(row, x, y) {
+  const c = topData && topData.cards[Number(row.dataset.i)];
+  if (!c) return;
+  tip.innerHTML = `<b>${esc(c.card_name)}</b>
+    <div><span>Searches</span><em>${esc(c.searches)}</em></div>
+    <div><span>Last searched</span><em>${when(c.last_searched)}</em></div>
+    <div><span>Cheapest seen</span><em>${money(c.cheapest)}</em></div>`;
+  tip.hidden = false;
+  const card = topChart.parentElement.getBoundingClientRect();
+  tip.style.left = `${Math.min(x - card.left + 14, card.width - tip.offsetWidth - 8)}px`;
+  tip.style.top = `${y - card.top + 14}px`;
+}
+topChart.addEventListener('pointermove', (e) => {
+  const row = e.target.closest('.bar-row');
+  if (row) showTip(row, e.clientX, e.clientY);
+  else tip.hidden = true;
+});
+topChart.addEventListener('pointerleave', () => (tip.hidden = true));
+topChart.addEventListener('focusin', (e) => {
+  const row = e.target.closest('.bar-row');
+  if (!row) return;
+  const r = row.getBoundingClientRect();
+  showTip(row, r.left + r.width / 2, r.bottom - 6);
+});
+topChart.addEventListener('focusout', () => (tip.hidden = true));
+
+document.querySelectorAll('.seg-btn').forEach((b) =>
+  b.addEventListener('click', () => {
+    topPeriod = b.dataset.period;
+    document.querySelectorAll('.seg-btn').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    loadTop();
+  }),
+);
+$('#top-start').addEventListener('change', (e) => loadTop(e.target.value));
+$('#top-view').addEventListener('click', (e) => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+  e.currentTarget.setAttribute('aria-pressed', String(on));
+  e.currentTarget.textContent = on ? 'Show chart' : 'Show table';
+  if (topData) renderTop();
+});
 
 boot();
