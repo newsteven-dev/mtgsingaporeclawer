@@ -118,6 +118,23 @@ checks every request with Supabase, so another GitHub user who signs in just see
    - `http://localhost:3000/**` (for running it on your computer)
 4. Make sure the server has `SUPABASE_PUBLISHABLE_KEY` set. It's already in `render.yaml` and `.env.example`.
 
+## Search locations
+
+Each saved search records the searcher's **approximate location**, shown in the captured searches report
+(a Location column in the search log and a **Searches by location** table).
+
+- It's worked out on the server from the visitor's IP address with offline databases bundled in the app, so
+  visitors' addresses are never sent to another service, and the **IP address itself is never stored**:
+  only city or district, region and country.
+  - IPv4 visitors: city or district (e.g. "Singapore (Geylang)"), from [DB-IP Lite](https://db-ip.com) (CC BY 4.0).
+  - IPv6 visitors: country only, from geo-whois-asn-country (CC0). DB-IP's IPv6 city file would push the app past
+    the 512 MB of Render's free plan.
+- The site sits behind Cloudflare, so the visitor's address is read from the `CF-Connecting-IP` header.
+  The per-visitor search limit uses the same address.
+- The main page says that searches are saved with an approximate location. Set `SEARCH_LOCATION=off` to turn it off.
+- `npm start` caps Node's memory (`--max-old-space-size=300`) so memory use stays well under 512 MB on Render,
+  including while the Card Kingdom price list refreshes.
+
 ## Put it on the internet (Render)
 
 The repo includes a `render.yaml`, so [Render](https://render.com) can set everything up from it.
@@ -181,6 +198,7 @@ then stores still loading, then stores with nothing in stock or that couldn't be
 | `ADMIN_EMAILS` | none | Verified GitHub emails allowed to see captured searches (comma-separated); when set, decides access |
 | `ADMIN_GITHUB_USERS` | `newsteven-dev` | GitHub usernames allowed to see captured searches, used only when `ADMIN_EMAILS` is empty |
 | `CACHE_MINUTES` | `10` | How long price results are cached |
+| `SEARCH_LOCATION` | on | Set to `off` to stop saving searchers' approximate location |
 | `SEARCHES_PER_10_MIN` | `40` | Card searches allowed per visitor every 10 minutes |
 | `USD_SGD_RATE` | daily rate | Fixed USD to SGD rate for Card Kingdom prices |
 | `TCG_API_URL` | `https://thetcgmarketplace.com:3501/` | TCG Marketplace API base |

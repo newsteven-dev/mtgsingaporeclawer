@@ -6,6 +6,27 @@ const money = (n) => (n == null ? '—' : `S$${Number(n).toFixed(2)}`);
 const when = (t) =>
   new Date(t).toLocaleString('en-SG', { timeZone: 'Asia/Singapore', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 const STORE_NAMES = {};
+let regionNames = null;
+try {
+  regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+} catch {
+  /* older browsers: show the code */
+}
+const countryName = (code) => {
+  if (!code) return '';
+  try {
+    return (regionNames && regionNames.of(code)) || code;
+  } catch {
+    return code;
+  }
+};
+/** "Singapore (Geylang)", "Johor Bahru, Johor", ... with the country added when it isn't Singapore. */
+const placeLabel = (city, region, country) => {
+  const place = [city, region && region !== city ? region : ''].filter(Boolean).join(', ');
+  if (!country) return '';
+  if (country === 'SG') return place || 'Singapore';
+  return [place, countryName(country)].filter(Boolean).join(', ');
+};
 const storeName = (id) => STORE_NAMES[id] || id;
 const PAGE = 50;
 
@@ -66,6 +87,7 @@ async function load(reset) {
     if (data.cards) {
       allCards = data.cards;
       renderStats();
+      renderLocations(data.locations || []);
       if (!topData) loadTop();
       renderCards();
     }
@@ -84,6 +106,22 @@ function renderStats() {
     <div class="stat"><span class="stat-n">${allCards.length}</span><span class="muted">cards tracked</span></div>
     <div class="stat"><span class="stat-n">${searches}</span><span class="muted">searches captured</span></div>
     <div class="stat"><span class="stat-n">${last ? esc(last.card_name) : '—'}</span><span class="muted">${last ? `last searched ${when(last.last_searched)}` : 'no searches yet'}</span></div>`;
+}
+
+function renderLocations(rows) {
+  $('#locations tbody').innerHTML = rows.length
+    ? rows
+        .map(
+          (l) => `<tr>
+        <td class="title">${esc(placeLabel(l.city, l.region, l.country) || countryName(l.country))}</td>
+        <td>${esc(countryName(l.country))}</td>
+        <td>${esc(l.searches)}</td>
+        <td class="opt">${esc(l.cards)}</td>
+        <td class="opt">${when(l.last_searched)}</td>
+      </tr>`,
+        )
+        .join('')
+    : `<tr><td colspan="5" class="muted">No searches with a location yet. New searches will show up here.</td></tr>`;
 }
 
 function renderCards() {
@@ -109,7 +147,7 @@ function renderLog(searches, reset) {
   const tbody = $('#log tbody');
   if (reset) tbody.innerHTML = '';
   if (reset && !searches.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="muted">No searches match.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="muted">No searches match.</td></tr>`;
     $('#log-count').textContent = '';
     return;
   }
@@ -118,6 +156,7 @@ function renderLog(searches, reset) {
     tr.innerHTML = `
       <td class="when">${when(s.searched_at)}</td>
       <td class="title">${esc(s.card_name)}</td>
+      <td class="loc">${s.location_country ? esc(placeLabel(s.location_city, s.location_region, s.location_country)) : '<span class="muted">—</span>'}</td>
       <td class="opt">${esc(s.stores_checked)}</td>
       <td class="price">${money(s.cheapest)}<span class="set">${s.cheapest_store ? esc(storeName(s.cheapest_store)) : ''}</span></td>
       <td class="opt">${esc(s.in_stock_listings ?? 0)}</td>
@@ -141,7 +180,7 @@ async function toggleDetails(btn, tr, s) {
   btn.textContent = 'Hide';
   const row = document.createElement('tr');
   row.className = 'detail-row';
-  row.innerHTML = `<td colspan="6"><span class="muted">Loading…</span></td>`;
+  row.innerHTML = `<td colspan="7"><span class="muted">Loading…</span></td>`;
   tr.after(row);
   try {
     const { snapshots } = await api(`/api/admin/snapshots?ids=${(s.snapshot_ids || []).join(',')}`);

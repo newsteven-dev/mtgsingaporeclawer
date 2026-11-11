@@ -36,15 +36,15 @@ async function rest(path, opts = {}) {
 }
 
 /** Store one store's results for a card. Only fresh (non-cached) fetches should be recorded. */
-async function recordSnapshot(cardName, store, listings) {
+async function recordSnapshot(cardName, store, listings, location = null) {
   if (!enabled) return null;
   const slim = listings.map(({ title, set, setCode, condition, finish, price, stock, inStock, url }) => ({
     title, set, setCode, condition, finish, price, stock, inStock, url,
   }));
-  return rest('rpc/record_price_snapshot', {
-    method: 'POST',
-    body: JSON.stringify({ p_card_name: cardName, p_store: store, p_listings: slim }),
-  });
+  const body = { p_card_name: cardName, p_store: store, p_listings: slim };
+  // Only the approximate place (city/district, region, country) is sent, never the IP address.
+  if (location) body.p_location = { city: location.city || '', region: location.region || '', country: location.country || '' };
+  return rest('rpc/record_price_snapshot', { method: 'POST', body: JSON.stringify(body) });
 }
 
 /** Daily cheapest in-stock price per store for a card, oldest first. */
@@ -80,13 +80,19 @@ const likeValue = (s) => `*${String(s).replace(/[*,()]/g, ' ').trim()}*`;
 async function searchEvents({ limit = 50, offset = 0, q = '' } = {}) {
   if (!enabled) return [];
   const params = new URLSearchParams({
-    select: 'card_name,searched_at,stores_checked,stores,snapshot_ids,in_stock_listings,cheapest,cheapest_store',
+    select: 'card_name,searched_at,stores_checked,stores,snapshot_ids,in_stock_listings,cheapest,cheapest_store,location_city,location_region,location_country',
     order: 'searched_at.desc',
     limit: String(limit),
     offset: String(offset),
   });
   if (q) params.set('card_name', `ilike.${likeValue(q)}`);
   return rest(`search_events?${params}`);
+}
+
+/** Searches per location (country, region, city), most first. */
+async function searchLocations(limit = 50) {
+  if (!enabled) return [];
+  return rest(`search_locations?select=country,region,city,searches,cards,last_searched&order=searches.desc,last_searched.desc&limit=${limit}`);
 }
 
 /** Every card searched so far, most recent first. */
@@ -128,4 +134,5 @@ module.exports = {
   snapshotsWithListings,
   searchPeriods,
   topSearchedCards,
+  searchLocations,
 };

@@ -15,6 +15,7 @@ const db = require('./db');
 const cardkingdom = require('./cardkingdom');
 const auth = require('./auth');
 const latestset = require('./latestset');
+const geo = require('./geo');
 const { TtlCache } = require('./util');
 
 const PORT = Number(process.env.PORT || 3000);
@@ -45,8 +46,10 @@ function rateLimit({ windowMs, max }) {
   }, windowMs).unref();
   return (req, res, next) => {
     const now = Date.now();
-    let h = hits.get(req.ip);
-    if (!h || h.reset <= now) hits.set(req.ip, (h = { count: 0, reset: now + windowMs }));
+    // Key on the visitor's own address: behind Cloudflare, req.ip is often a Cloudflare edge address.
+    const who = geo.clientIp(req) || req.ip;
+    let h = hits.get(who);
+    if (!h || h.reset <= now) hits.set(who, (h = { count: 0, reset: now + windowMs }));
     if (++h.count > max) {
       res.set('Retry-After', String(Math.ceil((h.reset - now) / 1000)));
       return res.status(429).json({ error: 'Too many searches, please wait a few minutes and try again.', listings: [] });
@@ -136,8 +139,12 @@ app.get('/api/admin/searches', auth.requireAdmin, async (req, res) => {
   const offset = Math.max(0, Number(req.query.offset) || 0);
   const q = String(req.query.q || '').slice(0, 100);
   try {
-    const [searches, cards] = await Promise.all([db.searchEvents({ limit, offset, q }), offset ? null : db.capturedCards()]);
-    res.json({ searches, cards, limit, offset });
+    const [searches, cards, locations] = await Promise.all([
+      db.searchEvents({ limit, offset, q }),
+      offset ? null : db.capturedCards(),
+      offset ? null : db.searchLocations(),
+    ]);
+    res.json({ searches, cards, locations, limit, offset });
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
@@ -212,7 +219,11 @@ app.get('/api/prices', async (req, res) => {
     priceCache.set(key, payload);
     res.json(payload);
     // Record fresh results for price history; never let storage errors affect the response.
-    db.recordSnapshot(name, store.id, listings).catch((err) => console.error(`[db] ${store.id} ${name}: ${err.message}`));
+    geo
+      .locateRequest(req)
+      .catch(() => null)
+      .then((location) => db.recordSnapshot(name, store.id, listings, location))
+      .catch((err) => console.error(`[db] ${store.id} ${name}: ${err.message}`));
   } catch (err) {
     console.error(`[${store.id}] ${name}: ${err.message}`);
     res.status(502).json({

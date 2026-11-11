@@ -4,7 +4,7 @@
   "description": "Compare Magic: The Gathering singles prices across Singapore shops",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node --max-old-space-size=300 src/server.js",
     "test": "node --test"
   },
   "repository": {
@@ -18,9 +18,12 @@
   },
   "homepage": "https://github.com/newsteven-dev/mtgsingaporeclawer#readme",
   "dependencies": {
+    "@ip-location-db/dbip-city-mmdb": "^2.3.2026060513",
+    "@ip-location-db/geo-whois-asn-country-mmdb": "^2.3.2026061719",
     "@supabase/supabase-js": "^2.119.0",
     "cheerio": "^1.2.0",
-    "express": "^4.22.3"
+    "express": "^4.22.3",
+    "maxmind": "^5.0.8"
   },
   "engines": {
     "node": ">=20.12"
