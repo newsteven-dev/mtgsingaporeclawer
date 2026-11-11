@@ -28,6 +28,13 @@ services:
       # Set the value in the Render dashboard so it isn't stored in the repo.
       - key: ADMIN_EMAILS
         sync: false
+      # The site's public address, used in search-engine metadata, the sitemap and link previews.
+      - key: SITE_URL
+        value: https://mtg-sg-price-compare.onrender.com
+      # Google Search Console's "HTML tag" verification code (just the content="..." value).
+      # Set it in the Render dashboard; leave it empty if you verify another way.
+      - key: GOOGLE_SITE_VERIFICATION
+        sync: false
       # Secret: Render asks for this value when you create the service. Never commit it.
       - key: SUPABASE_SECRET_KEY
         sync: false

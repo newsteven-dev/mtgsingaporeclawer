@@ -1,0 +1,14 @@
+{
+  "name": "MTG SG Price Compare",
+  "short_name": "MTG SG Prices",
+  "description": "Compare Magic: The Gathering singles prices across 7 Singapore stores.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#f6f5f2",
+  "theme_color": "#b3261e",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -122,6 +122,7 @@
     const url = new URL(location.href);
     url.searchParams.set('card', name);
     history.replaceState(null, '', url);
+    document.title = `${name} price in Singapore: compare 7 stores | MTG SG Price Compare`;
 
     $('#main').hidden = false;
     results = Object.fromEntries(stores.map((s) => [s.id, { status: 'loading' }]));
