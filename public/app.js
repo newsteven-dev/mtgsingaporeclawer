@@ -626,13 +626,24 @@
   /* ---------------- Top 5 in the newest set (Scryfall, TCGplayer prices) ---------------- */
 
   let latestRank = 'price';
+  let latestSet = ''; // set code; empty = newest
 
   async function loadLatest() {
     const rank = latestRank;
+    const set = latestSet;
     try {
-      const res = await fetch(`/api/latest-set?rank=${rank}`);
+      const res = await fetch(`/api/latest-set?rank=${rank}${set ? `&set=${encodeURIComponent(set)}` : ''}`);
       const d = await res.json();
-      if (rank !== latestRank) return;
+      if (rank !== latestRank || set !== latestSet) return;
+      if (d.sets && d.sets.length) {
+        const current = (d.set && d.set.code) || set;
+        $('#latest-sets').innerHTML = d.sets
+          .map(
+            (s) => `<button type="button" class="seg-btn latest-set-btn" data-set="${esc(s.code)}" aria-pressed="${s.code === current}"
+              title="Released ${esc(s.releasedAt)}">${esc(s.name)}</button>`,
+          )
+          .join('');
+      }
       if (!res.ok || !d.cards || !d.cards.length) {
         // Keep the switch visible if only one ranking (e.g. Card Kingdom) has nothing.
         if ($('#latest-list').children.length) {
@@ -680,6 +691,13 @@
       loadLatest();
     }),
   );
+  $('#latest-sets').addEventListener('click', (e) => {
+    const b = e.target.closest('.latest-set-btn');
+    if (!b || b.getAttribute('aria-pressed') === 'true') return;
+    latestSet = b.dataset.set;
+    document.querySelectorAll('.latest-set-btn').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    loadLatest();
+  });
   $('#latest-list').addEventListener('click', (e) => {
     const b = e.target.closest('.latest-pick');
     if (b) choose(b.dataset.card);

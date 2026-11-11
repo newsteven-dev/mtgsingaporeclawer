@@ -109,6 +109,7 @@ function slim(r) {
     conds, // [[price, qty] | null] in NM, EX, VG, G order (compact to save memory)
     qty: Number(r.qty_retail || 0),
     url: r.url ? SITE + r.url : null,
+    sid: r.scryfall_id || null, // Scryfall card id, for pictures and canonical names
   };
 }
 
@@ -264,6 +265,7 @@ async function topInEdition(edition, n = 5) {
       sgd: sgd(e.conds[0][0], fxr.rate),
       nmQty: e.conds[0][1],
       url: e.url,
+      scryfallId: e.sid || null,
     }));
 }
 

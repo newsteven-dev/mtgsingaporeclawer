@@ -62,3 +62,14 @@ test('most played orders by EDHREC rank', async () => {
   assert.equal(r.cards[0].edhrecRank, 10);
   assert.ok(requested.some((u) => u.includes('order=edhrec') && u.includes('dir=asc')));
 });
+
+test('lists the recent sets and ranks the one asked for', async () => {
+  const sets = await latest.recentSets();
+  assert.deepEqual(sets.map((s) => s.code), ['fra', 'hob'], 'unreleased, digital and Commander sets are skipped; at most 4');
+  const r = await latest.topCards('price', 'HOB');
+  assert.equal(r.set.code, 'hob');
+  assert.deepEqual(r.sets.map((s) => s.code), ['fra', 'hob']);
+  assert.ok(requested.some((u) => decodeURIComponent(u).includes('q=set:hob game:paper') || new URL(u).searchParams.get('q') === 'set:hob game:paper'));
+  const fallback = await latest.topCards('price', 'nope');
+  assert.equal(fallback.set.code, 'fra', 'unknown set codes fall back to the newest set');
+});
