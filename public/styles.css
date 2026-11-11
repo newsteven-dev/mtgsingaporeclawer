@@ -251,13 +251,16 @@ code { font-size: 13px; }
 .latest-head h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); }
 .latest-head h3 span { color: var(--text); }
 .latest-head h3 { flex: 1 1 auto; }
-#latest-sets:empty { display: none; }
-#latest-sets .seg-btn { font-size: 13px; padding: 6px 10px; }
+.latest-rows { display: flex; flex-direction: column; gap: 12px; }
+.latest-rows[aria-busy="true"] { opacity: .6; transition: opacity .2s; }
+.latest-set-name { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
 @media (max-width: 700px) {
-  /* Four set names don't fit in one row on a phone: show the tabs as a 2x2 grid. */
-  #latest-sets { order: 3; width: 100%; display: grid; grid-template-columns: 1fr 1fr; overflow: visible; border: 0; gap: 6px; }
-  #latest-sets .seg-btn { border: 1px solid var(--border); border-radius: 8px; white-space: normal; line-height: 1.25; }
-  #latest-sets .seg-btn + .seg-btn { border-left: 1px solid var(--border); }
+  /* On phones each set is a sideways-scrolling strip, so four sets don't make the page very long. */
+  .latest-row .latest-list {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 8px;
+    padding-bottom: 6px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; scroll-padding: 0 16px;
+  }
+  .latest-row .latest-card { flex: 0 0 72%; max-width: 260px; scroll-snap-align: start; }
 }
 .latest-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .latest-card { display: flex; flex-direction: column; gap: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px; min-width: 0; }
@@ -269,7 +272,7 @@ code { font-size: 13px; }
 .latest-rank-n { color: var(--muted); font-weight: 500; margin-right: 2px; }
 .latest-price { font-variant-numeric: tabular-nums; font-size: 13px; }
 .latest-tcg { margin-left: 56px; }
-@media (max-width: 900px) { .latest-list { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); } }
+@media (min-width: 701px) and (max-width: 900px) { .latest-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* Top searches: ranked horizontal bars (single measure, one hue) */
 :root { --bar: #2a78d6; }

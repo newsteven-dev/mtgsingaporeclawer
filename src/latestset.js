@@ -141,4 +141,22 @@ async function topCards(rank = 'price', setCode = '') {
   return out;
 }
 
-module.exports = { topCards, newestSet, recentSets };
+/** Top 5 for every recent set (newest first), each ranked the same way. */
+async function topCardsAllSets(rank = 'price') {
+  const sets = await recentSets();
+  const results = await Promise.allSettled(sets.map((s) => topCards(rank, s.code)));
+  const rows = results.map((r, i) =>
+    r.status === 'fulfilled'
+      ? { set: sets[i], cards: r.value.cards }
+      : { set: sets[i], cards: [], error: r.reason && r.reason.message },
+  );
+  const ok = results.find((r) => r.status === 'fulfilled');
+  return {
+    rank: ok ? ok.value.rank : rank,
+    rows,
+    usdSgd: ok ? ok.value.usdSgd : null,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+module.exports = { topCards, topCardsAllSets, newestSet, recentSets };

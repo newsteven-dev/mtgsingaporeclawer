@@ -31,15 +31,14 @@
       <p class="hint">Card names are suggested by <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>.</p>
       <section id="latest" class="latest" hidden aria-labelledby="latest-title">
         <div class="latest-head">
-          <h3 id="latest-title">Top 5 in <span id="latest-set"></span></h3>
-          <div id="latest-sets" class="seg" role="group" aria-label="Set"></div>
+          <h3 id="latest-title">Top 5 in the latest sets</h3>
           <div class="seg" role="group" aria-label="Rank by">
             <button type="button" class="seg-btn latest-rank" data-rank="price" aria-pressed="true">By price</button>
             <button type="button" class="seg-btn latest-rank" data-rank="played" aria-pressed="false">Most played</button>
             <button type="button" class="seg-btn latest-rank" data-rank="ck" aria-pressed="false">Card Kingdom</button>
           </div>
         </div>
-        <ol id="latest-list" class="latest-list"></ol>
+        <div id="latest-rows" class="latest-rows"></div>
         <p id="latest-note" class="muted small"></p>
       </section>
       <section id="trending" class="trending" hidden>

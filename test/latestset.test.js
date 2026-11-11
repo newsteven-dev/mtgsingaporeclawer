@@ -73,3 +73,11 @@ test('lists the recent sets and ranks the one asked for', async () => {
   const fallback = await latest.topCards('price', 'nope');
   assert.equal(fallback.set.code, 'fra', 'unknown set codes fall back to the newest set');
 });
+
+test('all recent sets come back row by row, newest first, ranked the same way', async () => {
+  const r = await latest.topCardsAllSets('played');
+  assert.equal(r.rank, 'played');
+  assert.deepEqual(r.rows.map((row) => row.set.code), ['fra', 'hob']);
+  assert.ok(r.rows.every((row) => row.cards.length === 5));
+  assert.equal(r.rows[0].cards[0].name, 'Land A');
+});
