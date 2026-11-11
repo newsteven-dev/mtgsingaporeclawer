@@ -159,4 +159,20 @@ async function topCardsAllSets(rank = 'price') {
   };
 }
 
-module.exports = { topCards, topCardsAllSets, newestSet, recentSets };
+/** TCGplayer market price (USD, via Scryfall) for every card in a set, by lower-case name and front face. */
+async function setTcgPrices(setCode) {
+  const out = new Map();
+  let url = `${API}/cards/search?${new URLSearchParams({ q: `set:${setCode} game:paper`, unique: 'cards' })}`;
+  for (let page = 0; url && page < 6; page++) {
+    const res = await getJson(url, { headers: HEADERS });
+    for (const c of res.data || []) {
+      const usd = Number(c.prices && c.prices.usd) || null;
+      out.set(c.name.toLowerCase(), usd);
+      if (c.card_faces && c.card_faces[0]) out.set(c.card_faces[0].name.toLowerCase(), usd);
+    }
+    url = res.has_more ? res.next_page : null;
+  }
+  return out;
+}
+
+module.exports = { topCards, topCardsAllSets, newestSet, recentSets, scryfallCardsFor, setTcgPrices, imageOf };

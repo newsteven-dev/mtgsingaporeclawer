@@ -296,6 +296,15 @@ code { font-size: 13px; }
 .bar-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 #top-table { margin-top: 4px; }
 #log td.loc { white-space: normal; min-width: 120px; }
+.sub-h { margin: 18px 0 8px; font-size: 15px; }
+.sub-h .small { font-weight: 400; }
+#movers-table td, #bargains td { vertical-align: top; }
+#movers-table td.mv-card { display: flex; gap: 8px; align-items: flex-start; min-width: 200px; }
+#movers-table td.mv-card img { border-radius: 3px; flex: none; }
+#movers-table .store-col { min-width: 92px; }
+#movers-table .up { color: var(--best); font-weight: 600; }
+#movers-table .down { color: var(--accent); font-weight: 600; }
+#bargains tr.bargain td.best-pct { color: var(--best); }
 @media (max-width: 600px) {
   .bar-row { grid-template-columns: 18px minmax(0, 1fr) 32px; grid-template-rows: auto auto; row-gap: 4px; }
   .bar-rank { grid-row: 1 / span 2; }

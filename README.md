@@ -118,6 +118,23 @@ checks every request with Supabase, so another GitHub user who signs in just see
    - `http://localhost:3000/**` (for running it on your computer)
 4. Make sure the server has `SUPABASE_PUBLISHABLE_KEY` set. It's already in `render.yaml` and `.env.example`.
 
+## Price movers report
+
+The captured searches page has a **Price movers** section for the newest set:
+
+- **Movers:** the 5 cards whose Card Kingdom Near Mint price changed most over the last 7 days (up or down),
+  ignoring cards under US$1.
+- **Singapore comparison:** each card's cheapest in-stock copy at every store, with its price as a % of Card Kingdom's.
+- **Under 50% of Card Kingdom:** in-stock Singapore listings of the set's own printing (not older reprints) priced below
+  half of Card Kingdom's price for the same condition (NM vs NM, LP vs EX, MP vs VG, HP vs G), converted to S$.
+
+Card Kingdom doesn't publish price history, so the server saves the newest set's prices once a day (Singapore time)
+in the `set_card_prices` table, checking hourly while it's awake. Movers appear once there are two days of prices and
+become a full 7-day comparison after a week; until then the section compares the set's 5 most valuable cards.
+On Render's free plan the server sleeps when nobody visits, so a day can be missed; movers then compare against
+the oldest saved day within the last 7. The report's store lookups use the 10-minute price cache and are not
+saved as searches.
+
 ## Search locations
 
 Each saved search records the searcher's **approximate location**, shown in the captured searches report
@@ -179,6 +196,7 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/trending` | Recently tracked cards with price change vs 7 days ago (signed-in allowlisted user only) |
 | `GET /api/config` | Public sign-in settings (Supabase URL and publishable key) |
 | `GET /api/admin/searches?q=&limit=&offset=` | Captured searches and cards (signed-in allowlisted user only) |
+| `GET /api/admin/movers` | Price movers of the newest set vs the Singapore stores (signed-in allowlisted user only) |
 | `GET /api/admin/top?period=day\|month&start=YYYY-MM-DD` | Top 20 searched cards for a day or month (signed-in allowlisted user only) |
 | `GET /api/admin/snapshots?ids=1,2` | Store snapshots and listings for one search (signed-in allowlisted user only) |
 

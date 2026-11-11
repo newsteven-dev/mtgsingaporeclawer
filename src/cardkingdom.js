@@ -267,4 +267,33 @@ async function topInEdition(edition, n = 5) {
     }));
 }
 
-module.exports = { sellPrices, ensureLoaded, usdToSgd, topInEdition, _createRecordScanner: createRecordScanner, _slim: slim };
+/**
+ * Every regular printing (non-foil, no special variation) in one edition, one entry per card,
+ * with Card Kingdom's price and stock for each condition. Conditions are keyed by the
+ * Singapore stores' grades: NM, LP (CK "EX"), MP (CK "VG"), HP (CK "G").
+ */
+async function editionCards(edition) {
+  const idx = await ensureLoaded();
+  const want = normalizeName(edition);
+  const best = new Map();
+  for (const entries of idx.values()) {
+    for (const e of entries) {
+      if (e.foil || e.variation || normalizeName(e.edition) !== want || !e.conds[0]) continue;
+      const cur = best.get(e.name);
+      if (!cur || e.conds[0][0] > cur.conds[0][0]) best.set(e.name, e);
+    }
+  }
+  return [...best.values()].map((e) => {
+    const usd = {};
+    const qty = {};
+    CONDITIONS.forEach((c, i) => {
+      if (e.conds[i]) {
+        usd[c.equivalent] = e.conds[i][0];
+        qty[c.equivalent] = e.conds[i][1];
+      }
+    });
+    return { name: e.name, url: e.url, scryfallId: e.sid || null, usd, qty };
+  });
+}
+
+module.exports = { sellPrices, ensureLoaded, usdToSgd, topInEdition, editionCards, _createRecordScanner: createRecordScanner, _slim: slim };
