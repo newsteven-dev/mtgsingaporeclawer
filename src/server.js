@@ -16,6 +16,7 @@ const cardkingdom = require('./cardkingdom');
 const auth = require('./auth');
 const latestset = require('./latestset');
 const geo = require('./geo');
+const movers = require('./movers');
 const { TtlCache } = require('./util');
 
 const PORT = Number(process.env.PORT || 3000);
@@ -150,6 +151,16 @@ app.get('/api/admin/searches', auth.requireAdmin, async (req, res) => {
   }
 });
 
+/** Price movers of the newest set vs the Singapore stores: GET /api/admin/movers (signed-in only, cached 10 min). */
+app.get('/api/admin/movers', auth.requireAdmin, async (_req, res) => {
+  try {
+    res.json(await movers.buildReport(getStorePrices));
+  } catch (err) {
+    console.error(`[movers] ${err.message}`);
+    res.status(502).json({ error: err.message, cards: [], bargains: [] });
+  }
+});
+
 /** Top 20 searched cards: GET /api/admin/top?period=day|month[&start=YYYY-MM-DD] (defaults to the latest period). */
 app.get('/api/admin/top', auth.requireAdmin, async (req, res) => {
   const period = req.query.period === 'month' ? 'month' : 'day';
@@ -188,6 +199,34 @@ app.get('/api/trending', auth.requireAdmin, async (_req, res) => {
   }
 });
 
+/**
+ * One store's listings for a card, from the 10-minute cache or a fresh search (shared by
+ * /api/prices and the price movers report). `fresh` says whether the store was actually searched.
+ */
+async function getStorePrices(store, name, { refresh = false } = {}) {
+  const key = `${store.id}|${name.toLowerCase()}`;
+  const cached = priceCache.get(key);
+  if (cached && !refresh) return { payload: { ...cached, cached: true }, fresh: false };
+  const started = Date.now();
+  let p = inflight.get(key);
+  if (!p) {
+    p = store.search(name).finally(() => inflight.delete(key));
+    inflight.set(key, p);
+  }
+  const listings = (await p).sort((a, b) => Number(b.inStock) - Number(a.inStock) || a.price - b.price);
+  const payload = {
+    store: store.id,
+    storeName: store.name,
+    searchUrl: store.searchPageUrl(name),
+    listings,
+    ...(listings.diagnostics ? { diagnostics: listings.diagnostics } : {}),
+    fetchedAt: new Date().toISOString(),
+    ms: Date.now() - started,
+  };
+  priceCache.set(key, payload);
+  return { payload, fresh: true };
+}
+
 /** Price listings for one card at one store: GET /api/prices?store=agora&name=Lightning%20Bolt */
 app.get('/api/prices', async (req, res) => {
   const name = String(req.query.name || '').trim();
@@ -195,34 +234,16 @@ app.get('/api/prices', async (req, res) => {
   if (!name) return res.status(400).json({ error: 'name is required' });
   if (!store) return res.status(400).json({ error: `unknown store; use one of ${Object.keys(stores.byId).join(', ')}` });
 
-  const key = `${store.id}|${name.toLowerCase()}`;
-  const cached = priceCache.get(key);
-  if (cached && req.query.refresh !== '1') return res.json({ ...cached, cached: true });
-
   const started = Date.now();
   try {
-    let p = inflight.get(key);
-    if (!p) {
-      p = store.search(name).finally(() => inflight.delete(key));
-      inflight.set(key, p);
-    }
-    const listings = (await p).sort((a, b) => Number(b.inStock) - Number(a.inStock) || a.price - b.price);
-    const payload = {
-      store: store.id,
-      storeName: store.name,
-      searchUrl: store.searchPageUrl(name),
-      listings,
-      ...(listings.diagnostics ? { diagnostics: listings.diagnostics } : {}),
-      fetchedAt: new Date().toISOString(),
-      ms: Date.now() - started,
-    };
-    priceCache.set(key, payload);
+    const { payload, fresh } = await getStorePrices(store, name, { refresh: req.query.refresh === '1' });
     res.json(payload);
+    if (!fresh) return;
     // Record fresh results for price history; never let storage errors affect the response.
     geo
       .locateRequest(req)
       .catch(() => null)
-      .then((location) => db.recordSnapshot(name, store.id, listings, location))
+      .then((location) => db.recordSnapshot(name, store.id, payload.listings, location))
       .catch((err) => console.error(`[db] ${store.id} ${name}: ${err.message}`));
   } catch (err) {
     console.error(`[${store.id}] ${name}: ${err.message}`);
@@ -241,6 +262,8 @@ if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`MTG SG price compare running at http://localhost:${PORT}`);
     console.log(db.enabled ? 'Price history: saving to Supabase' : 'Price history: off (set SUPABASE_URL and SUPABASE_SECRET_KEY to enable)');
+    // Save the newest set's prices once a day, for the price movers report.
+    movers.scheduleSnapshots();
   });
 }
 

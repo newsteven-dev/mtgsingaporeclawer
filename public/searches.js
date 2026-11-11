@@ -89,6 +89,7 @@ async function load(reset) {
       renderStats();
       renderLocations(data.locations || []);
       if (!topData) loadTop();
+      if (!moversLoaded) loadMovers();
       renderCards();
     }
     renderLog(data.searches, reset);
@@ -326,5 +327,81 @@ $('#top-view').addEventListener('click', (e) => {
   e.currentTarget.textContent = on ? 'Show chart' : 'Show table';
   if (topData) renderTop();
 });
+
+/* ---------------- Price movers of the newest set vs the Singapore stores ---------------- */
+
+let moversLoaded = false;
+const usd = (n) => (n == null ? '—' : `US$${Number(n).toFixed(2)}`);
+const fmtDay = (d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+const pctOf = (price, ref) => (price != null && ref ? Math.round((price / ref) * 100) : null);
+
+async function loadMovers() {
+  moversLoaded = true;
+  try {
+    renderMovers(await api('/api/admin/movers'));
+  } catch (err) {
+    $('#movers-table tbody').innerHTML = `<tr><td class="muted">Couldn't load price movers: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+function renderMovers(r) {
+  $('#movers-set').textContent = r.set ? `${r.set.name} (newest set)` : '';
+  const h = r.history;
+  $('#movers-sub').textContent =
+    r.mode === 'movers'
+      ? `The 5 cards whose Card Kingdom Near Mint price changed most in the last ${r.moverDays} days, and what the Singapore stores ask for them.`
+      : `Daily price history started ${h ? fmtDay(h.firstDay) : 'today'}, so there's nothing to compare yet: movers appear once there are two days of prices, and become a full ${r.moverDays}-day comparison after a week. Until then this shows the set's 5 most valuable cards at Card Kingdom.`;
+
+  const storeCols = (r.cards[0] && r.cards[0].stores) || [];
+  $('#movers-table thead').innerHTML = `<tr><th>Card</th><th>Card Kingdom NM</th><th>${r.moverDays}-day change</th><th>Cheapest in SG</th>${storeCols
+    .map((s) => `<th class="opt store-col">${esc(s.name)}</th>`)
+    .join('')}</tr>`;
+
+  $('#movers-table tbody').innerHTML = r.cards.length
+    ? r.cards
+        .map((c) => {
+          const best = c.stores.filter((s) => s.cheapest).reduce((m, s) => (m && m.cheapest.price <= s.cheapest.price ? m : s), null);
+          const move = c.mover;
+          const change = move
+            ? `<span class="${move.changePct >= 0 ? 'up' : 'down'}">${move.changePct >= 0 ? '▲' : '▼'} ${Math.abs(move.changePct)}%</span><span class="set">${usd(move.oldUsd)} → ${usd(move.newUsd)} since ${fmtDay(move.oldDay)}</span>`
+            : '<span class="muted">—</span>';
+          const cell = (s) => {
+            if (s.error) return '<span class="muted small">unavailable</span>';
+            if (!s.cheapest) return '<span class="muted">—</span>';
+            const p = pctOf(s.cheapest.price, c.ckNmSgd);
+            return `<a href="${esc(s.cheapest.url)}" target="_blank" rel="noopener">${money(s.cheapest.price)}</a><span class="set">${esc(s.cheapest.condition || 'NM')}${s.cheapest.finish === 'foil' ? ' · foil' : ''}${p != null ? ` · ${p}% of CK` : ''}</span>`;
+          };
+          return `<tr>
+            <td class="title mv-card">${c.image ? `<img src="${esc(c.image)}" alt="" width="36" height="50" loading="lazy" />` : ''}<span>${esc(c.name)}<span class="set"><a href="/?card=${encodeURIComponent(c.name)}">Compare ↗</a>${c.ckUrl ? ` · <a href="${esc(c.ckUrl)}" target="_blank" rel="noopener">Card Kingdom ↗</a>` : ''}</span></span></td>
+            <td class="price">${money(c.ckNmSgd)}<span class="set">${usd(c.ckNmUsd)}</span></td>
+            <td>${change}</td>
+            <td class="price">${best ? `${money(best.cheapest.price)}<span class="set">${esc(best.name)} · ${esc(best.cheapest.condition || 'NM')} · ${pctOf(best.cheapest.price, c.ckNmSgd)}% of CK</span>` : '<span class="muted">Not in stock</span>'}</td>
+            ${c.stores.map((s) => `<td class="opt store-col">${cell(s)}</td>`).join('')}
+          </tr>`;
+        })
+        .join('')
+    : `<tr><td class="muted">No cards to show.</td></tr>`;
+
+  $('#bargains tbody').innerHTML = r.bargains.length
+    ? r.bargains
+        .map(
+          (b) => `<tr class="bargain">
+        <td class="title">${esc(b.card)}</td>
+        <td>${esc(b.store)}</td>
+        <td class="opt title">${esc(b.set || '')}${b.finish === 'foil' ? ' · foil' : ''}</td>
+        <td>${esc(b.condition)}</td>
+        <td class="price">${money(b.price)}</td>
+        <td class="opt">${money(b.ckSgd)}<span class="set">${esc(b.ckGrade)} · ${usd(b.ckUsd)}</span></td>
+        <td class="price best-pct">${esc(b.pctOfCk)}%</td>
+        <td><a href="${esc(b.url)}" target="_blank" rel="noopener">View ↗</a></td>
+      </tr>`,
+        )
+        .join('')
+    : `<tr><td colspan="8" class="muted">No in-stock listings of these cards are under ${Math.round(r.bargainRatio * 100)}% of Card Kingdom's price right now.</td></tr>`;
+
+  $('#movers-note').textContent =
+    `Card Kingdom prices are converted at about S$${r.usdSgd ? Number(r.usdSgd).toFixed(2) : '?'} per US$1 and don't include shipping from the US. ` +
+    `Card Kingdom grades EX, VG and G are compared with LP, MP and HP. Store prices are cached for up to 10 minutes; this report refreshes every 10 minutes.`;
+}
 
 boot();

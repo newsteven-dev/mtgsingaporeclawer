@@ -124,8 +124,36 @@ async function topSearchedCards(period, start, limit = 20) {
   return rest('rpc/top_searched_cards', { method: 'POST', body: JSON.stringify({ p_period: period, p_start: start, p_limit: limit }) });
 }
 
+/* ---------- Daily set prices (for price movers) ---------- */
+
+/** Save one day's prices for a set's cards (insert or update, so re-running a day is safe). */
+async function upsertSetPrices(rows) {
+  if (!enabled || !rows.length) return null;
+  return rest('set_card_prices?on_conflict=day,set_code,card_name', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(rows),
+  });
+}
+
+/** Biggest Card Kingdom price changes in a set over the last `days` days. */
+async function setPriceMovers(setCode, days = 7, limit = 5) {
+  if (!enabled) return [];
+  return rest('rpc/set_price_movers', { method: 'POST', body: JSON.stringify({ p_set_code: setCode, p_days: days, p_limit: limit }) });
+}
+
+/** First and last day of saved prices for a set. */
+async function setPriceDays(setCode) {
+  if (!enabled) return null;
+  const rows = await rest('rpc/set_price_days', { method: 'POST', body: JSON.stringify({ p_set_code: setCode }) });
+  return (rows && rows[0]) || null;
+}
+
 module.exports = {
   enabled,
+  upsertSetPrices,
+  setPriceMovers,
+  setPriceDays,
   recordSnapshot,
   history,
   trending,
