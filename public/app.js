@@ -626,14 +626,33 @@
   /* ---------------- Top 5 in the newest set (Scryfall, TCGplayer prices) ---------------- */
 
   let latestRank = 'price';
+  let latestSet = ''; // set code; empty = newest
 
   async function loadLatest() {
     const rank = latestRank;
+    const set = latestSet;
     try {
-      const res = await fetch(`/api/latest-set?rank=${rank}`);
+      const res = await fetch(`/api/latest-set?rank=${rank}${set ? `&set=${encodeURIComponent(set)}` : ''}`);
       const d = await res.json();
-      if (rank !== latestRank) return;
-      if (!res.ok || !d.cards || !d.cards.length) return ($('#latest').hidden = true);
+      if (rank !== latestRank || set !== latestSet) return;
+      if (d.sets && d.sets.length) {
+        const current = (d.set && d.set.code) || set;
+        $('#latest-sets').innerHTML = d.sets
+          .map(
+            (s) => `<button type="button" class="seg-btn latest-set-btn" data-set="${esc(s.code)}" aria-pressed="${s.code === current}"
+              title="Released ${esc(s.releasedAt)}">${esc(s.name)}</button>`,
+          )
+          .join('');
+      }
+      if (!res.ok || !d.cards || !d.cards.length) {
+        // Keep the switch visible if only one ranking (e.g. Card Kingdom) has nothing.
+        if ($('#latest-list').children.length) {
+          $('#latest-list').innerHTML = '';
+          $('#latest-note').textContent = `Couldn't load this ranking right now${d && d.error ? ` (${d.error})` : ''}.`;
+          return;
+        }
+        return ($('#latest').hidden = true);
+      }
       $('#latest-set').textContent = d.set.name;
       $('#latest-list').innerHTML = d.cards
         .map(
@@ -644,17 +663,21 @@
                 <span class="latest-name"><span class="latest-rank-n">${c.rank}</span> ${esc(c.name)}</span>
                 <span class="latest-price">${c.sgd != null ? `≈ ${money(c.sgd)}` : ''} <span class="muted">${c.usd != null ? `US$${Number(c.usd).toFixed(2)}${c.foilOnly ? ' foil' : ''}` : ''}</span></span>
                 ${rank === 'played' && c.edhrecRank ? `<span class="muted small">EDHREC #${esc(c.edhrecRank)}</span>` : ''}
+                ${rank === 'ck' && c.nmQty != null ? `<span class="muted small">${c.nmQty ? `${esc(c.nmQty)} NM in stock` : 'NM sold out'}</span>` : ''}
               </span>
             </button>
-            <a class="latest-tcg small" href="${esc(c.tcgplayerUrl)}" target="_blank" rel="noopener">TCGplayer ↗</a>
+            <a class="latest-tcg small" href="${esc((c.link || {}).url || c.tcgplayerUrl)}" target="_blank" rel="noopener">${esc((c.link || {}).label || 'TCGplayer')} ↗</a>
           </li>`,
         )
         .join('');
+      const perUsd = d.usdSgd ? `, about S$${Number(d.usdSgd).toFixed(2)} per US$1` : '';
       $('#latest-note').textContent =
-        (rank === 'played'
-          ? 'Most played: ranked by EDHREC (how many Commander decks play the card). '
-          : 'By price: highest TCGplayer market price. ') +
-        `Prices are TCGplayer market prices in USD via Scryfall${d.usdSgd ? `, about S$${Number(d.usdSgd).toFixed(2)} per US$1` : ''}. Click a card to compare it in Singapore.`;
+        rank === 'ck'
+          ? `Card Kingdom: the set's regular printings (non-foil, no special versions) by Card Kingdom's Near Mint price in USD${perUsd}. Click a card to compare it in Singapore.`
+          : (rank === 'played'
+              ? 'Most played: ranked by EDHREC (how many Commander decks play the card). '
+              : 'By price: highest TCGplayer market price. ') +
+            `Prices are TCGplayer market prices in USD via Scryfall${perUsd}. Click a card to compare it in Singapore.`;
       $('#latest').hidden = false;
     } catch (err) {
       console.warn('latest set failed', err);
@@ -668,6 +691,13 @@
       loadLatest();
     }),
   );
+  $('#latest-sets').addEventListener('click', (e) => {
+    const b = e.target.closest('.latest-set-btn');
+    if (!b || b.getAttribute('aria-pressed') === 'true') return;
+    latestSet = b.dataset.set;
+    document.querySelectorAll('.latest-set-btn').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    loadLatest();
+  });
   $('#latest-list').addEventListener('click', (e) => {
     const b = e.target.closest('.latest-pick');
     if (b) choose(b.dataset.card);

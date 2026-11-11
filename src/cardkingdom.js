@@ -109,6 +109,7 @@ function slim(r) {
     conds, // [[price, qty] | null] in NM, EX, VG, G order (compact to save memory)
     qty: Number(r.qty_retail || 0),
     url: r.url ? SITE + r.url : null,
+    sid: r.scryfall_id || null, // Scryfall card id, for pictures and canonical names
   };
 }
 
@@ -237,4 +238,35 @@ async function sellPrices(cardName) {
   };
 }
 
-module.exports = { sellPrices, ensureLoaded, usdToSgd, _createRecordScanner: createRecordScanner, _slim: slim };
+/**
+ * The most expensive regular printings in one edition (e.g. "Reality Fracture"): non-foil,
+ * no special variation, ranked by Card Kingdom's Near Mint price, one entry per card.
+ * Special versions live in separate editions ("Reality Fracture Variants") and are left out.
+ */
+async function topInEdition(edition, n = 5) {
+  const [idx, fxr] = await Promise.all([ensureLoaded(), usdToSgd()]);
+  const want = normalizeName(edition);
+  const best = new Map();
+  for (const entries of idx.values()) {
+    for (const e of entries) {
+      if (e.foil || e.variation || normalizeName(e.edition) !== want) continue;
+      const nm = e.conds[0];
+      if (!nm) continue;
+      const cur = best.get(e.name);
+      if (!cur || nm[0] > cur.conds[0][0]) best.set(e.name, e);
+    }
+  }
+  return [...best.values()]
+    .sort((a, b) => b.conds[0][0] - a.conds[0][0])
+    .slice(0, n)
+    .map((e) => ({
+      name: e.name,
+      usd: e.conds[0][0],
+      sgd: sgd(e.conds[0][0], fxr.rate),
+      nmQty: e.conds[0][1],
+      url: e.url,
+      scryfallId: e.sid || null,
+    }));
+}
+
+module.exports = { sellPrices, ensureLoaded, usdToSgd, topInEdition, _createRecordScanner: createRecordScanner, _slim: slim };

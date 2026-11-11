@@ -94,10 +94,10 @@ app.get('/api/history', auth.requireAdmin, async (req, res) => {
   }
 });
 
-/** Top 5 cards of the newest set: GET /api/latest-set?rank=price|played (public, cached 6 hours). */
+/** Top 5 cards of a recent set: GET /api/latest-set?rank=price|played|ck[&set=fra] (public, cached 6 hours). */
 app.get('/api/latest-set', async (req, res) => {
   try {
-    res.json(await latestset.topCards(req.query.rank === 'played' ? 'played' : 'price'));
+    res.json(await latestset.topCards(String(req.query.rank || 'price'), String(req.query.set || '')));
   } catch (err) {
     res.status(502).json({ error: err.message, cards: [] });
   }
