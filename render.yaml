@@ -5,7 +5,9 @@ services:
     name: mtg-sg-price-compare
     runtime: node
     region: singapore
-    plan: free
+    # Always on, 512 MB. Keep this in step with the plan chosen in Render: Render syncs
+    # this file, so "free" here would move the service back to the free plan.
+    plan: starter
     branch: main
     buildCommand: npm ci
     startCommand: npm start

@@ -7,7 +7,7 @@
  *   IPv4: city or district, region and country, from DB-IP Lite (CC BY 4.0, "IP geolocation
  *         by DB-IP"), ~63 MB, loaded on the first lookup.
  *   IPv6: country only, from geo-whois-asn-country (CC0), ~5 MB. DB-IP's IPv6 city database
- *         is ~71 MB and would push the app past the 512 MB of Render's free plan during the
+ *         is ~71 MB and would push the app past the 512 MB of Render's Starter plan during the
  *         Card Kingdom refresh, so IPv6 visitors get their country but not their city.
  */
 
