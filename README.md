@@ -129,10 +129,10 @@ The captured searches page has a **Price movers** section for the newest set:
   half of Card Kingdom's price for the same condition (NM vs NM, LP vs EX, MP vs VG, HP vs G), converted to S$.
 
 Card Kingdom doesn't publish price history, so the server saves the newest set's prices once a day (Singapore time)
-in the `set_card_prices` table, checking hourly while it's awake. Movers appear once there are two days of prices and
+in the `set_card_prices` table, checking hourly. Movers appear once there are two days of prices and
 become a full 7-day comparison after a week; until then the section compares the set's 5 most valuable cards.
-On Render's free plan the server sleeps when nobody visits, so a day can be missed; movers then compare against
-the oldest saved day within the last 7. The report's store lookups use the 10-minute price cache and are not
+If a day is ever missed (for example the server was down, or Card Kingdom couldn't be reached), movers compare
+against the oldest saved day within the last 7. The report's store lookups use the 10-minute price cache and are not
 saved as searches.
 
 ## Search locations
@@ -145,12 +145,40 @@ Each saved search records the searcher's **approximate location**, shown in the 
   only city or district, region and country.
   - IPv4 visitors: city or district (e.g. "Singapore (Geylang)"), from [DB-IP Lite](https://db-ip.com) (CC BY 4.0).
   - IPv6 visitors: country only, from geo-whois-asn-country (CC0). DB-IP's IPv6 city file would push the app past
-    the 512 MB of Render's free plan.
+    the 512 MB of Render's Starter plan.
 - The site sits behind Cloudflare, so the visitor's address is read from the `CF-Connecting-IP` header.
   The per-visitor search limit uses the same address.
 - The main page says that searches are saved with an approximate location. Set `SEARCH_LOCATION=off` to turn it off.
 - `npm start` caps Node's memory (`--max-old-space-size=300`) so memory use stays well under 512 MB on Render,
   including while the Card Kingdom price list refreshes.
+
+## Google and other search engines
+
+The server fills in each page's search-engine metadata (`src/seo.js`), so crawlers see it without running scripts:
+
+- **Main page:** title, description, canonical URL, Open Graph and Twitter tags for link previews (with
+  `og-image.png`), and structured data (`WebSite` with a `SearchAction`, so Google knows `/?card=<name>` is a search).
+- **Card pages:** links like `/?card=Lightning%20Bolt` get their own title ("Lightning Bolt price in Singapore: compare 7
+  stores"), description and canonical URL, so individual cards can show up in search results.
+- **`/robots.txt`:** allows the site but keeps `/login.html`, `/searches.html` and `/api/admin/` out. Those pages also
+  carry `noindex`. The public `/api/` stays crawlable because Google needs it to render a card page's prices.
+- **`/sitemap.xml`:** the main page plus card pages for the newest sets' top cards.
+- **Crawler searches aren't saved:** when Google (or a link-preview bot) renders a card page, its store lookups aren't saved
+  as searches, so they don't appear in the captured searches report.
+- **Icons:** `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` and a web app manifest.
+
+### Get the site into Google
+
+1. Go to [Google Search Console](https://search.google.com/search-console), click **Add property** and choose
+   **URL prefix**: `https://mtg-sg-price-compare.onrender.com/`.
+2. Choose the **HTML tag** method. Google shows a tag like `<meta name="google-site-verification" content="abc123..." />`.
+   Copy only the `content` value.
+3. In Render, open the service's **Environment** tab, add `GOOGLE_SITE_VERIFICATION` with that value and save
+   (Render restarts the app), then click **Verify** in Search Console.
+4. In Search Console, open **Sitemaps** and submit `sitemap.xml`. Use **URL inspection → Request indexing** on the main
+   page to speed things up. Google usually lists a new site within a few days to a couple of weeks.
+
+If you move to your own domain, set `SITE_URL` to it so canonical URLs and the sitemap use the new address.
 
 ## Put it on the internet (Render)
 
@@ -164,8 +192,10 @@ The repo includes a `render.yaml`, so [Render](https://render.com) can set every
 
 Notes:
 
-- The free plan sleeps after about 15 minutes without visitors, so the first visit after that takes 30–60 seconds to load.
-  Upgrade the service to a paid instance in Render to keep it always on.
+- The service runs on Render's **Starter** plan (`plan: starter` in `render.yaml`): always on, with 512 MB of memory.
+  The app is sized for that: about 300 MB normally and about 350 MB at peak, while the Card Kingdom price list refreshes.
+  Render's free plan would also work, but it sleeps after about 15 minutes without visitors (the next visit then takes
+  30–60 seconds), and daily price snapshots for the movers report would be missed while it sleeps.
 - The service runs in Render's Singapore region, close to the shops.
 - Each visitor is limited to about 40 card searches per 10 minutes (`SEARCHES_PER_10_MIN`) so the public site can't be used to flood the shops.
 
@@ -216,6 +246,8 @@ then stores still loading, then stores with nothing in stock or that couldn't be
 | `ADMIN_EMAILS` | none | Verified GitHub emails allowed to see captured searches (comma-separated); when set, decides access |
 | `ADMIN_GITHUB_USERS` | `newsteven-dev` | GitHub usernames allowed to see captured searches, used only when `ADMIN_EMAILS` is empty |
 | `CACHE_MINUTES` | `10` | How long price results are cached |
+| `SITE_URL` | `https://mtg-sg-price-compare.onrender.com` | Public address used in canonical URLs, the sitemap and link previews |
+| `GOOGLE_SITE_VERIFICATION` | none | Google Search Console HTML-tag verification code |
 | `SEARCH_LOCATION` | on | Set to `off` to stop saving searchers' approximate location |
 | `SEARCHES_PER_10_MIN` | `40` | Card searches allowed per visitor every 10 minutes |
 | `USD_SGD_RATE` | daily rate | Fixed USD to SGD rate for Card Kingdom prices |

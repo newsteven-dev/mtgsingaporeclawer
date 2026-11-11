@@ -20,6 +20,16 @@ test('the server starts and serves its basic endpoints', async () => {
     assert.ok([401, 503].includes(admin.status), `admin report needs a sign-in (got ${admin.status})`);
     const page = await fetch(`${base}/`);
     assert.equal(page.status, 200);
+    assert.match(await page.text(), /<link rel="canonical"/, 'main page is served with its metadata');
+    const card = await (await fetch(`${base}/?card=Sol%20Ring`)).text();
+    assert.match(card, /<title>Sol Ring price in Singapore/);
+    const robots = await fetch(`${base}/robots.txt`);
+    assert.equal(robots.status, 200);
+    assert.match(robots.headers.get('content-type'), /text\/plain/);
+    for (const f of ['/styles.css', '/favicon.svg', '/og-image.png', '/manifest.webmanifest', '/searches.html']) {
+      assert.equal((await fetch(base + f)).status, 200, f);
+    }
+    assert.match(await (await fetch(`${base}/searches.html`)).text(), /<meta name="robots" content="noindex, nofollow"/);
   } finally {
     server.close();
   }

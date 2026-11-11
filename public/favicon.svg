@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MTG SG Price Compare">
+  <rect width="64" height="64" rx="14" fill="#b3261e"/>
+  <rect x="14" y="10" width="26" height="36" rx="4" fill="#ffffff" opacity="0.55" transform="rotate(-10 27 28)"/>
+  <rect x="22" y="14" width="28" height="38" rx="4" fill="#ffffff"/>
+  <text x="36" y="40" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#b3261e">S$</text>
+</svg>

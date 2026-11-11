@@ -17,6 +17,7 @@ const auth = require('./auth');
 const latestset = require('./latestset');
 const geo = require('./geo');
 const movers = require('./movers');
+const seo = require('./seo');
 const { TtlCache } = require('./util');
 
 const PORT = Number(process.env.PORT || 3000);
@@ -29,7 +30,25 @@ const app = express();
 app.disable('x-powered-by');
 // Behind a host's load balancer (Render, Railway, ...), take the client IP from X-Forwarded-For.
 app.set('trust proxy', 1);
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// The main page is served with its search-engine metadata filled in (title, description,
+// canonical URL, link previews); card links like /?card=Lightning%20Bolt get their own.
+app.get(['/', '/index.html'], (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.type('html').send(seo.renderIndex(req.query.card));
+});
+app.get('/robots.txt', (_req, res) => res.type('text/plain').send(seo.robotsTxt()));
+app.get('/sitemap.xml', async (_req, res) => {
+  // The newest sets' top cards give search engines some card pages to start from.
+  let names = [];
+  try {
+    const top = await latestset.topCardsAllSets('price');
+    names = top.rows.flatMap((r) => r.cards.map((c) => c.name));
+  } catch {
+    /* the main page alone is still a valid sitemap */
+  }
+  res.type('application/xml').send(seo.sitemapXml(names));
+});
+app.use(express.static(path.join(__dirname, '..', 'public'), { index: false }));
 // Browser build of supabase-js for the login pages, served from node_modules (no CDN needed).
 app.get('/vendor/supabase.js', (_req, res) =>
   res.sendFile(require.resolve('@supabase/supabase-js/dist/umd/supabase.js'), { maxAge: '1d' }),
@@ -238,7 +257,8 @@ app.get('/api/prices', async (req, res) => {
   try {
     const { payload, fresh } = await getStorePrices(store, name, { refresh: req.query.refresh === '1' });
     res.json(payload);
-    if (!fresh) return;
+    // Search engines rendering a card page aren't real searches: don't save them.
+    if (!fresh || seo.isBot(req)) return;
     // Record fresh results for price history; never let storage errors affect the response.
     geo
       .locateRequest(req)

@@ -5,7 +5,9 @@ services:
     name: mtg-sg-price-compare
     runtime: node
     region: singapore
-    plan: free
+    # Always on, 512 MB. Keep this in step with the plan chosen in Render: Render syncs
+    # this file, so "free" here would move the service back to the free plan.
+    plan: starter
     branch: main
     buildCommand: npm ci
     startCommand: npm start
@@ -25,6 +27,13 @@ services:
       # Verified GitHub emails allowed to see captured searches (comma-separated).
       # Set the value in the Render dashboard so it isn't stored in the repo.
       - key: ADMIN_EMAILS
+        sync: false
+      # The site's public address, used in search-engine metadata, the sitemap and link previews.
+      - key: SITE_URL
+        value: https://mtg-sg-price-compare.onrender.com
+      # Google Search Console's "HTML tag" verification code (just the content="..." value).
+      # Set it in the Render dashboard; leave it empty if you verify another way.
+      - key: GOOGLE_SITE_VERIFICATION
         sync: false
       # Secret: Render asks for this value when you create the service. Never commit it.
       - key: SUPABASE_SECRET_KEY
