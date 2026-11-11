@@ -32,8 +32,9 @@ Then open http://localhost:3000. Add `?card=Lightning%20Bolt` to the URL to link
 
 ## Top 5 in the last 4 sets
 
-Under the search bar, the main page shows the top 5 cards of one of the last 4 Magic sets (the most recent paper
-expansion or core sets on Scryfall, newest selected first, chosen with tabs), with a switch between:
+Under the search bar, the main page shows the top 5 cards of each of the last 4 Magic sets (the most recent paper
+expansion or core sets on Scryfall), one row per set with the newest at the top. On phones each row scrolls sideways.
+One switch ranks every row by:
 
 - **By price**: highest TCGplayer market price.
 - **Most played**: lowest EDHREC rank, i.e. played in the most Commander decks.
@@ -154,6 +155,7 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/autocomplete?q=bolt` | Card-name suggestions (Scryfall) |
 | `GET /api/card?name=Lightning%20Bolt` | Card details (Scryfall) |
 | `GET /api/prices?store=agora&name=Lightning%20Bolt[&refresh=1]` | Listings at one store (fresh results are saved to Supabase) |
+| `GET /api/latest-sets?rank=price\|played\|ck` | Top 5 of every one of the last 4 sets, one row per set |
 | `GET /api/latest-set?rank=price\|played\|ck&set=fra` | Top 5 cards of one of the last 4 sets (TCGplayer price, EDHREC popularity, or Card Kingdom price); lists the 4 sets |
 | `GET /api/cardkingdom?name=Lightning%20Bolt` | Card Kingdom retail prices and stock for every version and condition |
 | `GET /api/history?name=Lightning%20Bolt&days=90` | Daily cheapest price per store (signed-in allowlisted user only) |

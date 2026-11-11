@@ -94,6 +94,15 @@ app.get('/api/history', auth.requireAdmin, async (req, res) => {
   }
 });
 
+/** Top 5 cards of every recent set, row by row: GET /api/latest-sets?rank=price|played|ck (public, cached 6 hours). */
+app.get('/api/latest-sets', async (req, res) => {
+  try {
+    res.json(await latestset.topCardsAllSets(String(req.query.rank || 'price')));
+  } catch (err) {
+    res.status(502).json({ error: err.message, rows: [] });
+  }
+});
+
 /** Top 5 cards of a recent set: GET /api/latest-set?rank=price|played|ck[&set=fra] (public, cached 6 hours). */
 app.get('/api/latest-set', async (req, res) => {
   try {
