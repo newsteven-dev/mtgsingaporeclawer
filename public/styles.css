@@ -295,6 +295,7 @@ code { font-size: 13px; }
 .bar-fill { display: block; height: 100%; background: var(--bar); border-radius: 0 4px 4px 0; }
 .bar-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 #top-table { margin-top: 4px; }
+#log td.loc { white-space: normal; min-width: 120px; }
 @media (max-width: 600px) {
   .bar-row { grid-template-columns: 18px minmax(0, 1fr) 32px; grid-template-rows: auto auto; row-gap: 4px; }
   .bar-rank { grid-row: 1 / span 2; }

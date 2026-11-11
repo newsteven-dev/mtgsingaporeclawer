@@ -153,14 +153,12 @@ async function ensureLoaded() {
   const stale = !index || Date.now() - meta.loadedAt > REFRESH_MS;
   if (!stale) return index;
   if (!loading) {
+    // Free the old list before building the new one, so two copies (~120 MB each) are never
+    // in memory at once; requests during the few-second reload wait for the new list.
+    index = null;
     loading = load().finally(() => {
       loading = null;
     });
-  }
-  // Serve the old list while a refresh runs; only wait when there is nothing yet.
-  if (index) {
-    loading.catch((err) => console.error(`[cardkingdom] refresh failed: ${err.message}`));
-    return index;
   }
   return loading;
 }

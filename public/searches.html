@@ -61,10 +61,21 @@
       </section>
 
       <section>
+        <div class="filters"><h3>Searches by location <span class="muted small">approximate, from each visitor's internet address</span></h3></div>
+        <div class="table-wrap">
+          <table id="locations">
+            <thead><tr><th>Location</th><th>Country</th><th>Searches</th><th class="opt">Cards</th><th class="opt">Last search</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="muted small">Locations are worked out from the visitor's IP address and are only approximate (city or district). The address itself isn't stored. Searches made before this was added have no location. <a href="https://db-ip.com" target="_blank" rel="noopener">IP geolocation by DB-IP</a>.</p>
+      </section>
+
+      <section>
         <div class="filters"><h3>Search log <span id="log-count" class="muted small"></span></h3></div>
         <div class="table-wrap">
           <table id="log">
-            <thead><tr><th>When (SGT)</th><th>Card</th><th class="opt">Stores</th><th>Cheapest</th><th class="opt">In-stock listings</th><th></th></tr></thead>
+            <thead><tr><th>When (SGT)</th><th>Card</th><th>Location</th><th class="opt">Stores</th><th>Cheapest</th><th class="opt">In-stock listings</th><th></th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
