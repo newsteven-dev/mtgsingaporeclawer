@@ -37,6 +37,8 @@ expansion or core set on Scryfall), with a switch between:
 
 - **By price**: highest TCGplayer market price.
 - **Most played**: lowest EDHREC rank, i.e. played in the most Commander decks.
+- **Card Kingdom**: highest Card Kingdom Near Mint price among the set's regular printings (non-foil, no special
+  versions; Card Kingdom lists those under a separate "Variants" edition), with how many NM copies it has.
 
 Prices are TCGplayer market prices in USD, which Scryfall publishes, shown with an S$ estimate. Click a card to compare
 it across the Singapore stores, or follow its TCGplayer link. Results are cached for 6 hours.
@@ -152,7 +154,7 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 | `GET /api/autocomplete?q=bolt` | Card-name suggestions (Scryfall) |
 | `GET /api/card?name=Lightning%20Bolt` | Card details (Scryfall) |
 | `GET /api/prices?store=agora&name=Lightning%20Bolt[&refresh=1]` | Listings at one store (fresh results are saved to Supabase) |
-| `GET /api/latest-set?rank=price\|played` | Top 5 cards of the newest set (Scryfall, TCGplayer prices) |
+| `GET /api/latest-set?rank=price\|played\|ck` | Top 5 cards of the newest set (TCGplayer price, EDHREC popularity, or Card Kingdom price) |
 | `GET /api/cardkingdom?name=Lightning%20Bolt` | Card Kingdom retail prices and stock for every version and condition |
 | `GET /api/history?name=Lightning%20Bolt&days=90` | Daily cheapest price per store (signed-in allowlisted user only) |
 | `GET /api/trending` | Recently tracked cards with price change vs 7 days ago (signed-in allowlisted user only) |

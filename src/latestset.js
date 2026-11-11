@@ -8,10 +8,11 @@
  * So we rank the newest set's cards two ways instead:
  *   - "price":  highest TCGplayer market price (Scryfall's prices.usd)
  *   - "played": most played, by EDHREC rank (lower = in more Commander decks)
+ *   - "ck":     highest Card Kingdom Near Mint price, regular non-foil printings only
  */
 
 const { getJson, TtlCache } = require('./util');
-const { usdToSgd } = require('./cardkingdom');
+const { usdToSgd, topInEdition } = require('./cardkingdom');
 
 const HEADERS = { 'User-Agent': 'MTGSGPriceCompare/1.0', Accept: 'application/json' };
 const API = 'https://api.scryfall.com';
@@ -41,12 +42,48 @@ function imageOf(card) {
 const tcgplayerSearch = (name) =>
   `https://www.tcgplayer.com/search/magic/product?productLineName=magic&q=${encodeURIComponent(name)}`;
 
-/** Top 5 cards of the newest set, ranked by "price" or "played". */
+/** Card images for cards in one set, in one Scryfall request. */
+async function imagesFor(names, setCode) {
+  if (!names.length) return {};
+  const res = await getJson(`${API}/cards/collection`, {
+    method: 'POST',
+    headers: { ...HEADERS, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifiers: names.map((name) => ({ name, set: setCode })) }),
+  });
+  const out = {};
+  for (const c of res.data || []) out[c.name.toLowerCase()] = imageOf(c);
+  return out;
+}
+
+/** Top 5 regular printings of the newest set by Card Kingdom's Near Mint price. */
+async function topAtCardKingdom(set) {
+  const [rows, fx] = await Promise.all([topInEdition(set.name, 5), usdToSgd()]);
+  const images = await imagesFor(rows.map((r) => r.name), set.code).catch(() => ({}));
+  const cards = rows.map((r, i) => ({
+    rank: i + 1,
+    name: r.name,
+    image: images[r.name.toLowerCase()] || null,
+    usd: r.usd,
+    foilOnly: false,
+    sgd: r.sgd,
+    nmQty: r.nmQty,
+    link: { label: 'Card Kingdom', url: r.url },
+  }));
+  return { rank: 'ck', set, cards, usdSgd: fx.rate || null, updatedAt: new Date().toISOString() };
+}
+
+/** Top 5 cards of the newest set, ranked by "price", "played" or "ck" (Card Kingdom price). */
 async function topCards(rank = 'price') {
-  const by = rank === 'played' ? 'played' : 'price';
+  const by = ['played', 'ck'].includes(rank) ? rank : 'price';
   const key = `top:${by}`;
   const hit = cache.get(key);
   if (hit) return hit;
+
+  if (by === 'ck') {
+    const out = await topAtCardKingdom(await newestSet());
+    if (out.cards.length) cache.set(key, out);
+    return out;
+  }
 
   const [set, fx] = await Promise.all([newestSet(), usdToSgd()]);
   const q = new URLSearchParams({
@@ -71,6 +108,7 @@ async function topCards(rank = 'price') {
         sgd: usd && fx.rate ? Math.round(usd * fx.rate * 100) / 100 : null,
         edhrecRank: c.edhrec_rank || null,
         tcgplayerUrl: tcgplayerSearch(c.name),
+        link: { label: 'TCGplayer', url: tcgplayerSearch(c.name) },
       };
     });
   const out = { rank: by, set, cards, usdSgd: fx.rate || null, updatedAt: new Date().toISOString() };
