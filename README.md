@@ -267,3 +267,21 @@ The tests cover the parsers and name matching using small HTML/JSON fixtures, so
 
 - Prices are in SGD as each store lists them. Stores change their sites, so an adapter may break and need updating; when that happens its tile shows the error and a link to search the store directly.
 - Please use this tool reasonably. It makes a few requests per store per search and caches results to keep load on the shops light.
+
+## WhatsApp group digest
+
+`tools/whatsapp-digest.js` turns a WhatsApp chat export into an insights report for a day or a week: most active
+members, messages per day and hour, most mentioned words, buy/sell posts with prices, possibly unanswered questions,
+links shared and membership changes.
+
+1. In WhatsApp, open the group, tap its name, then **Export chat** > **Without media**. Unzip it if it arrives as a .zip.
+2. Put the `.txt` in `chats/`, which git ignores so private chats aren't committed.
+3. Run:
+
+```bash
+npm run whatsapp-digest -- chats/group.txt --period week --title "MTG SG" --out chats/week.md
+```
+
+`--period day` reports on the last day in the export, `--period week` on the 7 days ending on it; `--date YYYY-MM-DD`
+moves that end date, and `--from`/`--to` pick an exact range. Day-first dates (Singapore's format) are assumed unless
+the export shows otherwise; force it with `--order dmy` or `--order mdy`.

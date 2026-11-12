@@ -5,7 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node --max-old-space-size=300 src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "whatsapp-digest": "node tools/whatsapp-digest.js"
   },
   "repository": {
     "type": "git",
