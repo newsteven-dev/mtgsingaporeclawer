@@ -128,8 +128,10 @@ The captured searches page has a **Price movers** section for the newest set:
 - **Under 50% of Card Kingdom:** in-stock Singapore listings of the set's own printing (not older reprints) priced below
   half of Card Kingdom's price for the same condition (NM vs NM, LP vs EX, MP vs VG, HP vs G), converted to S$.
 
-Card Kingdom doesn't publish price history, so the server saves the newest set's prices once a day (Singapore time)
-in the `set_card_prices` table, checking hourly. Movers appear once there are two days of prices and
+Card Kingdom doesn't publish price history, so the server saves the newest set's prices in the `set_card_prices`
+table, checking hourly. Each saved day is labelled with the **date of the Card Kingdom price list** it came from
+(Card Kingdom publishes one list a day, around 06:00 US Eastern, about 7 pm in Singapore), so every saved day is a
+different list. Movers appear once there are two days of prices and
 become a full 7-day comparison after a week; until then the section compares the set's 5 most valuable cards.
 If a day is ever missed (for example the server was down, or Card Kingdom couldn't be reached), movers compare
 against the oldest saved day within the last 7. The report's store lookups use the 10-minute price cache and are not

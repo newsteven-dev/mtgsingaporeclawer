@@ -59,3 +59,8 @@ test('unknown rankings fall back to TCGplayer price', async () => {
   const r = await latest.topCards('nonsense');
   assert.equal(r.rank, 'price');
 });
+
+test("the snapshot date is the Card Kingdom price list's own date", async () => {
+  const ck = require('../src/cardkingdom');
+  assert.equal(await ck.priceListDate(), '2026-11-11');
+});

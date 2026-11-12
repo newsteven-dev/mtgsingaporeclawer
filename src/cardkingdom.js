@@ -296,4 +296,14 @@ async function editionCards(edition) {
   });
 }
 
-module.exports = { sellPrices, ensureLoaded, usdToSgd, topInEdition, editionCards, _createRecordScanner: createRecordScanner, _slim: slim };
+/**
+ * The date of the Card Kingdom price list currently loaded ("YYYY-MM-DD"), from its
+ * meta.created_at (US Eastern). Card Kingdom publishes one list a day, around 06:00 ET.
+ */
+async function priceListDate() {
+  await ensureLoaded();
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(meta.createdAt || ''));
+  return m ? m[1] : null;
+}
+
+module.exports = { sellPrices, ensureLoaded, usdToSgd, topInEdition, editionCards, priceListDate, _createRecordScanner: createRecordScanner, _slim: slim };
