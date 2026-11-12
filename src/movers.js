@@ -26,13 +26,21 @@ let lastSnapshot = { day: null, set: null };
 
 const sgToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' }).format(new Date());
 
-/** Save today's prices for the newest set (at most once per Singapore day unless forced). */
+/**
+ * Save the newest set's prices, labelled with the date of the Card Kingdom price list they
+ * come from. Card Kingdom publishes one list a day (around 06:00 US Eastern, ~7 pm in
+ * Singapore), so labelling by the list's own date means each saved day is a different list.
+ * (Labelling by the Singapore date saved the same list twice on 11 and 12 Nov 2026, two hours
+ * apart, so nothing could move.) Runs hourly; a list already saved is skipped, and re-saving
+ * a day just updates its rows.
+ */
 async function snapshotSetPrices({ force = false } = {}) {
   if (!db.enabled) return { skipped: 'no database' };
   const set = await latestset.newestSet();
-  const day = sgToday();
-  if (!force && lastSnapshot.day === day && lastSnapshot.set === set.code) return { skipped: 'already saved today', day, set: set.code };
+  const day = (await cardkingdom.priceListDate()) || sgToday();
+  if (!force && lastSnapshot.day === day && lastSnapshot.set === set.code) return { skipped: 'this price list is already saved', day, set: set.code };
   const [ck, tcg] = await Promise.all([cardkingdom.editionCards(set.name), latestset.setTcgPrices(set.code).catch(() => new Map())]);
+  const savedAt = new Date().toISOString();
   const rows = ck
     .filter((c) => c.usd.NM != null)
     .map((c) => ({
@@ -43,6 +51,7 @@ async function snapshotSetPrices({ force = false } = {}) {
       ck_nm_usd: c.usd.NM,
       ck_url: c.url,
       tcg_usd: tcg.get(c.name.toLowerCase()) ?? null,
+      recorded_at: savedAt, // updated on re-save too, so it always shows when the row was last written
     }));
   // PostgREST takes the batch in one request; ~300 rows per set.
   await db.upsertSetPrices(rows);
