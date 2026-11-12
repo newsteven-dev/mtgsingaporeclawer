@@ -285,3 +285,15 @@ npm run whatsapp-digest -- chats/group.txt --period week --title "MTG SG" --out 
 `--period day` reports on the last day in the export, `--period week` on the 7 days ending on it; `--date YYYY-MM-DD`
 moves that end date, and `--from`/`--to` pick an exact range. Day-first dates (Singapore's format) are assumed unless
 the export shows otherwise; force it with `--order dmy` or `--order mdy`.
+
+For operations or alert channels, where a bot or duty engineer posts monitoring alerts with ticket numbers, use
+`--mode alerts`. It groups alerts by type and resource, marks spikes in alerts per day, and lists critical alerts,
+tickets that were reopened or posted more than once, discussion between people, routine posts, acknowledgements and
+who gets tagged:
+
+```bash
+npm run whatsapp-digest -- chats/ops.txt --mode alerts --period week --out chats/ops-week.md
+```
+
+Ticket numbers starting with AMP, INC, CHG, PRB, RITM, SR or TKT followed by 5 or more digits are recognised; pass
+`--ticket-pattern '\bJIRA-\d+\b'` for other formats.

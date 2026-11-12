@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parseChat, resolveRange, analyze, renderMarkdown } = require('../tools/whatsapp-digest');
+const { parseChat, resolveRange, analyze, renderMarkdown, analyzeAlerts, renderAlertsMarkdown } = require('../tools/whatsapp-digest');
 
 const ANDROID = `13/11/2026, 09:15 - Messages and calls are end-to-end encrypted.
 13/11/2026, 09:16 - Alice: WTS Sheoldred NM $95, Ragavan S$70
@@ -56,4 +56,56 @@ test('reports members, trades, media, links, joins and unanswered questions', ()
   const md = renderMarkdown(r, 'MTG SG');
   assert.match(md, /# MTG SG: insights for 2026-11-13 to 2026-11-19/);
   assert.match(md, /WTS Sheoldred/);
+});
+
+const OPS = `[10/30/26, 8:00:00 AM] Ops Bot: <image omitted> INC1000001
+[APP2] Queue consumer idle - PRD
+major
+Resource
+OrderService
+Description
+OrderService has no consumption in the last hour.
+[10/30/26, 8:30:00 AM] Ops Bot: <image omitted> Hi @~Sam, daily DLQ summary for 30 Oct
+[10/30/26, 9:00:00 AM] Ops Bot: INC1000001
+Reopened
+[APP2] Queue consumer idle - PRD
+major
+Resource
+OrderService
+Description
+OrderService has no consumption in the last hour.
+@~Priya
+[10/30/26, 9:05:00 AM] Priya: Ack
+[10/30/26, 9:10:00 AM] Bot Watcher: why does this keep reopening?
+[10/31/26, 1:00:00 AM] Ops Bot: <image omitted> INC1000002, INC1000003
+[APP3] API Error 404 - PRD
+critical
+Resource
+GET /orders
+Description
+Error 404 occurred 120 times in last ten minutes.`;
+
+test('alerts mode groups tickets, reopens, severities, routine posts and discussion', () => {
+  const { messages } = parseChat(OPS);
+  const r = analyzeAlerts(messages, resolveRange(messages, { period: 'all' }));
+  assert.equal(r.alerts.length, 3);
+  assert.equal(r.tickets, 3);
+  assert.deepEqual(r.types.map((t) => [t.title, t.posts]), [['[APP2] Queue consumer idle - PRD', 2], ['[APP3] API Error 404 - PRD', 1]]);
+  assert.deepEqual(r.types[1].counts, [120]);
+  assert.deepEqual(r.resources[0], ['OrderService', 2]);
+  assert.equal(r.critical.length, 1);
+  assert.deepEqual(r.repeated.map((t) => [t.id, t.posts, t.reopens]), [['INC1000001', 2, 1]]);
+  assert.deepEqual(r.acks, [['Priya', 1]]);
+  assert.deepEqual(r.discussion.map((m) => m.sender), ['Bot Watcher']);
+  assert.equal(r.routine.length, 1);
+  assert.deepEqual(r.mentions.map(([m]) => m), ['Priya']);
+  const md = renderAlertsMarkdown(r, 'Ops');
+  assert.match(md, /\*\*3\*\* alert posts covering \*\*3\*\* tickets/);
+  assert.match(md, /\| INC1000001 \| 2 \| 1 \|/);
+});
+
+test('alerts mode accepts a custom ticket pattern', () => {
+  const { messages } = parseChat('[10/30/26, 8:00:00 AM] Bot: JIRA-123\n[X] Disk full\nmajor');
+  const r = analyzeAlerts(messages, resolveRange(messages, { period: 'all' }), { ticketPattern: String.raw`\bJIRA-\d+\b` });
+  assert.equal(r.alerts[0].title, '[X] Disk full');
 });

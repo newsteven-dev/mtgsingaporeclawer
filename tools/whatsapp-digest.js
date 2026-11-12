@@ -253,6 +253,181 @@ function renderMarkdown(r, title = 'WhatsApp group') {
   return out.join('\n');
 }
 
+// ---- Alerts mode: for ops channels where a bot or duty engineer posts monitoring alerts with ticket numbers ----
+
+const DEFAULT_TICKET_RE = String.raw`\b(?:AMP|INC|CHG|PRB|RITM|SR|TKT)\d{5,}\b`;
+const SEVERITY_RE = /^(?:[a-z]*?)(critical|major|minor|warning|high|medium|low)$/i;
+const STATUS_RE = /^(?:re-?open(?:ed)?|open|cleared|resolved|closed|ci|<?image omitted>?|<?media omitted>?)$/i;
+const ACK_RE = /^(?:ack(?:nowledged)?|noted|received|checking|on it|looking(?: into it)?)[.!\s]*$/i;
+
+function parseAlert(msg, ticketRe) {
+  const tickets = [...new Set(msg.text.match(ticketRe) || [])];
+  const lines = msg.text.split('\n').map((l) => l.trim());
+  let title = null;
+  let severity = null;
+  for (const line of lines) {
+    const bare = line.replace(ticketRe, '').replace(/<?(?:image|media) omitted>?/gi, '').replace(/[(),]/g, ' ').trim();
+    if (!bare) continue;
+    const sev = SEVERITY_RE.exec(bare);
+    if (sev) { severity = severity || sev[1].toLowerCase(); continue; }
+    if (STATUS_RE.test(bare) || /^(?:resource|description)$/i.test(bare)) continue;
+    if (!title) title = bare;
+  }
+  const section = (name) => {
+    const i = lines.findIndex((l) => l.toLowerCase() === name);
+    if (i < 0) return [];
+    const out = [];
+    for (const l of lines.slice(i + 1)) {
+      if (/^(?:resource|description)$/i.test(l) || l.startsWith('@')) break;
+      if (l) out.push(l);
+    }
+    return out;
+  };
+  const description = section('description');
+  const counts = description.join(' ').match(/\b\d+(?= times\b)/g) || [];
+  return {
+    ...msg,
+    tickets,
+    title: title || '(untitled alert)',
+    severity: severity || 'unknown',
+    reopened: /\bre-?open/i.test(msg.text),
+    resources: section('resource'),
+    description: description[0] || '',
+    counts: counts.map(Number),
+    mentions: (msg.text.match(/@~?[A-Za-z][\w.-]*(?: [A-Z][\w.-]*)?/g) || []).map((m) => m.replace(/^@~?/, '')),
+  };
+}
+
+function analyzeAlerts(allMessages, range, { ticketPattern } = {}) {
+  const ticketRe = new RegExp(ticketPattern || DEFAULT_TICKET_RE, 'g');
+  const inRange = allMessages.filter((m) => m.time >= range.start && m.time < range.end && m.sender);
+  const alerts = [];
+  const human = [];
+  for (const m of inRange) {
+    if ((m.text.match(ticketRe) || []).length) alerts.push(parseAlert(m, ticketRe));
+    else human.push(m);
+  }
+  const alertSenders = new Set(alerts.map((a) => a.sender));
+  const acks = human.filter((m) => ACK_RE.test(m.text));
+  const talk = human.filter((m) => !ACK_RE.test(m.text) && !MEDIA_RE.test(m.text) && !DELETED_RE.test(m.text));
+  // Posts by whoever posts the alerts, but without a ticket number, are usually routine (daily summaries, reports).
+  const routine = talk.filter((m) => alertSenders.has(m.sender));
+  const discussion = talk.filter((m) => !alertSenders.has(m.sender));
+
+  const types = new Map();
+  for (const a of alerts) {
+    const t = types.get(a.title) || { title: a.title, posts: 0, tickets: new Set(), severities: new Set(), counts: [], last: 0, resources: new Map() };
+    t.posts++;
+    a.tickets.forEach((x) => t.tickets.add(x));
+    t.severities.add(a.severity);
+    t.counts.push(...a.counts);
+    t.last = Math.max(t.last, a.time);
+    for (const r of a.resources) t.resources.set(r, (t.resources.get(r) || 0) + 1);
+    types.set(a.title, t);
+  }
+
+  const ticketPosts = new Map();
+  for (const a of alerts) for (const id of a.tickets) {
+    const entry = ticketPosts.get(id) || { id, posts: 0, reopens: 0, title: a.title, days: new Set() };
+    entry.posts++;
+    if (a.reopened) entry.reopens++;
+    entry.days.add(dayKey(a.time));
+    ticketPosts.set(id, entry);
+  }
+
+  return {
+    range,
+    total: inRange.length,
+    alerts,
+    alertSenders: [...alertSenders],
+    tickets: ticketPosts.size,
+    byDay: countBy(alerts, (a) => dayKey(a.time)).sort((a, b) => a[0].localeCompare(b[0])),
+    bySeverity: countBy(alerts, (a) => a.severity),
+    types: [...types.values()].sort((a, b) => b.posts - a.posts || b.last - a.last),
+    resources: countBy(alerts.flatMap((a) => a.resources.map((r) => ({ r }))), (x) => x.r),
+    critical: alerts.filter((a) => a.severity === 'critical'),
+    repeated: [...ticketPosts.values()].filter((t) => t.posts > 1).sort((a, b) => b.posts - a.posts),
+    mentions: countBy(alerts.flatMap((a) => a.mentions.map((m) => ({ m }))), (x) => x.m),
+    acks: countBy(acks, (m) => m.sender),
+    discussion,
+    routine,
+  };
+}
+
+function renderAlertsMarkdown(r, title = 'Alerts channel') {
+  const out = [];
+  out.push(`# ${title}: alert insights for ${r.range.label}`, '');
+  if (!r.alerts.length) {
+    out.push(r.total ? `No alerts with ticket numbers among ${r.total} messages. Try --ticket-pattern.` : 'No messages in this period.');
+    return out.join('\n');
+  }
+  const reopenedTickets = r.repeated.filter((t) => t.reopens > 0).length;
+  const busiest = [...r.byDay].sort((a, b) => b[1] - a[1])[0];
+  const avg = r.alerts.length / r.byDay.length;
+  out.push('## At a glance', '');
+  out.push(`- **${r.alerts.length}** alert posts covering **${r.tickets}** tickets, out of ${r.total} messages`);
+  out.push(`- Severity: ${r.bySeverity.map(([s, n]) => `${s} ${n}`).join(', ')}`);
+  out.push(`- Busiest day: **${busiest[0]}** with ${busiest[1]} alerts (average ${avg.toFixed(1)} per day with alerts)`);
+  out.push(`- ${r.repeated.length} tickets posted more than once, ${reopenedTickets} of them marked reopened`);
+  out.push(`- Alerts posted by: ${r.alertSenders.join(', ')}`);
+  out.push(`- Replies from people: ${r.discussion.length} messages of discussion, ${r.acks.reduce((s, [, n]) => s + n, 0)} acknowledgements`);
+  out.push('');
+
+  if (r.byDay.length > 1) {
+    const max = Math.max(...r.byDay.map(([, n]) => n));
+    out.push('## Alerts per day', '', '```');
+    for (const [day, n] of r.byDay) out.push(`${day}  ${bar(n, max)} ${n}${n >= 2 * avg ? '  ← spike' : ''}`);
+    out.push('```', '');
+  }
+
+  out.push('## Alert types', '', '| Alert | Posts | Tickets | Severity | Counts reported | Last seen |', '| --- | ---: | ---: | --- | --- | --- |');
+  for (const t of r.types.slice(0, 25)) {
+    const counts = t.counts.length ? `${Math.min(...t.counts)}–${Math.max(...t.counts)} times` : '';
+    out.push(`| ${t.title.replace(/\|/g, '\\|')} | ${t.posts} | ${t.tickets.size} | ${[...t.severities].join(', ')} | ${counts} | ${stamp(t.last)} |`);
+  }
+  if (r.types.length > 25) out.push(`| *${r.types.length - 25} more types* | | | | | |`);
+  out.push('');
+
+  if (r.resources.length) {
+    out.push('## Most affected resources', '', '| Resource | Alerts |', '| --- | ---: |');
+    for (const [res, n] of r.resources.slice(0, 15)) out.push(`| ${res.replace(/\|/g, '\\|')} | ${n} |`);
+    out.push('');
+  }
+
+  if (r.critical.length) {
+    out.push(`## Critical alerts (${r.critical.length})`, '');
+    for (const a of r.critical) out.push(`- ${stamp(a.time)} ${a.tickets.join(', ')}: **${a.title}**${a.description ? `. ${oneLine(a.description, 120)}` : ''}`);
+    out.push('');
+  }
+
+  if (r.repeated.length) {
+    out.push('## Repeated and reopened tickets', '', '| Ticket | Posts | Reopened | Days | Alert |', '| --- | ---: | ---: | --- | --- |');
+    for (const t of r.repeated.slice(0, 20)) out.push(`| ${t.id} | ${t.posts} | ${t.reopens} | ${[...t.days].sort().join(', ')} | ${t.title.replace(/\|/g, '\\|')} |`);
+    out.push('');
+  }
+
+  if (r.discussion.length) {
+    out.push('## Discussion (messages without a ticket number)', '');
+    for (const m of r.discussion.slice(0, 40)) out.push(`- ${stamp(m.time)} **${m.sender}**: ${oneLine(m.text, 220)}`);
+    if (r.discussion.length > 40) out.push(`- …and ${r.discussion.length - 40} more`);
+    out.push('');
+  }
+
+  if (r.routine.length) {
+    out.push(`## Routine posts from ${r.alertSenders.join(', ')} (${r.routine.length})`, '');
+    for (const m of r.routine.slice(0, 15)) out.push(`- ${stamp(m.time)} ${oneLine(m.text.replace(/<?(?:image|media) omitted>?/gi, '[image]'), 140)}`);
+    out.push('');
+  }
+
+  if (r.acks.length || r.mentions.length) {
+    out.push('## Who responds and who gets tagged', '');
+    if (r.acks.length) out.push(`- Acknowledgements: ${r.acks.map(([s, n]) => `${s} (${n})`).join(', ')}`);
+    if (r.mentions.length) out.push(`- Tagged in alerts: ${r.mentions.slice(0, 15).map(([s, n]) => `${s} (${n})`).join(', ')}`);
+    out.push('');
+  }
+  return out.join('\n');
+}
+
 function parseArgs(argv) {
   const opts = { period: 'week' };
   const positional = [];
@@ -273,6 +448,9 @@ function main(argv) {
   if (opts.help || !opts.file) {
     console.log(`Usage: node tools/whatsapp-digest.js <exported-chat.txt> [options]
 
+  --mode chat|alerts      chat = general group insights (default); alerts = ops channel report built
+                          from posts carrying ticket numbers (alert types, spikes, reopened tickets, critical alerts)
+  --ticket-pattern REGEX  ticket numbers for alerts mode (default: AMP/INC/CHG/PRB/RITM/SR/TKT + 5 or more digits)
   --period day|week|all   day = last day in the export, week = the 7 days ending on it (default: week)
   --date YYYY-MM-DD       end the day/week on this date instead
   --from / --to           an explicit date range (inclusive)
@@ -286,7 +464,14 @@ function main(argv) {
     console.error('No WhatsApp messages found. Is this the .txt from "Export chat" (unzipped)?');
     return 1;
   }
-  const report = renderMarkdown(analyze(messages, resolveRange(messages, opts)), opts.title);
+  const range = resolveRange(messages, opts);
+  let report;
+  if (opts.mode === 'alerts') report = renderAlertsMarkdown(analyzeAlerts(messages, range, { ticketPattern: opts['ticket-pattern'] }), opts.title);
+  else if (!opts.mode || opts.mode === 'chat') report = renderMarkdown(analyze(messages, range), opts.title);
+  else {
+    console.error(`Unknown mode "${opts.mode}" (use chat or alerts)`);
+    return 1;
+  }
   if (opts.out) {
     fs.writeFileSync(opts.out, `${report}\n`);
     console.error(`Wrote ${opts.out}`);
@@ -296,4 +481,4 @@ function main(argv) {
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
 
-module.exports = { parseChat, resolveRange, analyze, renderMarkdown };
+module.exports = { parseChat, resolveRange, analyze, renderMarkdown, analyzeAlerts, renderAlertsMarkdown };
