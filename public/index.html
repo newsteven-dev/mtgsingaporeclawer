@@ -76,6 +76,7 @@
         <label>Finish
           <select id="ck-finish"><option value="">Any</option><option value="nonfoil">Non-foil</option><option value="foil">Foil</option></select>
         </label>
+        <button type="button" id="export-ck" class="ghost" disabled title="Download every Card Kingdom version that matches the filters as a CSV file">Export CSV</button>
       </div>
       <p id="ck-headline" class="ck-headline"></p>
       <div class="table-wrap">
@@ -116,6 +117,7 @@
           <select id="f-cond"><option value="">Any</option><option>NM</option><option>LP</option><option>MP</option><option>HP</option><option>DMG</option></select>
         </label>
         <button type="button" id="refresh" class="ghost">Refresh prices</button>
+        <button type="button" id="export-listings" class="ghost" disabled title="Download every listing that matches the filters as a CSV file">Export CSV</button>
       </div>
       <div class="table-wrap">
         <table id="table">
@@ -137,6 +139,7 @@
     });
   </script>
   <script src="/vendor/supabase.js"></script>
+  <script src="csv.js"></script>
   <script src="app.js"></script>
   <script type="module" src="account.js"></script>
 </body>
