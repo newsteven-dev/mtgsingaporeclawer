@@ -236,6 +236,7 @@
     const onlyStock = $('#ck-instock').checked;
     const finish = $('#ck-finish').value;
     const rows = d.versions.filter((v) => (!onlyStock || v.inStock) && (!finish || v.finish === finish));
+    $('#export-ck').disabled = !rows.length;
     const shown = rows.slice(0, ckLimit);
 
     // Cheapest copy Card Kingdom actually has in stock (any version, any condition).
@@ -534,6 +535,13 @@
     );
   }
 
+  /** Every listing from the stores that answered, matching the filters, cheapest first. */
+  function filteredListings() {
+    return stores
+      .flatMap((s) => (results[s.id]?.status === 'ok' ? applyFilters(results[s.id].data.listings).map((l) => ({ ...l, store: s.id })) : []))
+      .sort((a, b) => a.price - b.price);
+  }
+
   function render() {
     // Summary tiles
     const cheapest = {};
@@ -584,9 +592,8 @@
 
     // Combined table
     const nameOf = Object.fromEntries(stores.map((s) => [s.id, s.name]));
-    const rows = stores
-      .flatMap((s) => (results[s.id]?.status === 'ok' ? applyFilters(results[s.id].data.listings).map((l) => ({ ...l, store: s.id })) : []))
-      .sort((a, b) => a.price - b.price);
+    const rows = filteredListings();
+    $('#export-listings').disabled = !rows.length;
 
     $('#count').textContent = rows.length ? `(${rows.length})` : '';
     const visible = rows.slice(0, tableLimit);
@@ -622,6 +629,59 @@
     tableLimit += PAGE_SIZE;
     render();
   });
+  /* ---------------- CSV export (runs in the browser; nothing is sent anywhere) ---------------- */
+
+  const exportDate = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' }).format(new Date());
+  const cardLabel = () => (currentCard && currentCard.name) || input.value.trim();
+
+  $('#export-listings').addEventListener('click', () => {
+    const card = cardLabel();
+    const nameOf = Object.fromEntries(stores.map((s) => [s.id, s.name]));
+    const rows = filteredListings().map((l) => [
+      card,
+      nameOf[l.store] || l.store,
+      l.title,
+      l.set || '',
+      l.setCode || '',
+      l.condition || '',
+      l.finish === 'foil' ? 'Foil' : 'Non-foil',
+      l.price,
+      l.inStock ? 'Yes' : 'No',
+      l.stock == null ? '' : l.stock,
+      l.url || '',
+      results[l.store]?.data?.fetchedAt || '',
+    ]);
+    const header = ['Card', 'Store', 'Listing', 'Set', 'Set code', 'Condition', 'Finish', 'Price (SGD)', 'In stock', 'Stock', 'Link', 'Checked at (UTC)'];
+    mtgCsv.download(`${mtgCsv.slug(card)}-singapore-prices-${exportDate()}.csv`, mtgCsv.toCsv(header, rows));
+  });
+
+  $('#export-ck').addEventListener('click', () => {
+    if (!ck || ck.status !== 'ok') return;
+    const card = cardLabel();
+    const onlyStock = $('#ck-instock').checked;
+    const finish = $('#ck-finish').value;
+    const rate = ck.data.usdSgd;
+    const rows = [];
+    for (const v of ck.data.versions.filter((x) => (!onlyStock || x.inStock) && (!finish || x.finish === finish))) {
+      for (const c of v.conditions) {
+        rows.push([
+          card,
+          v.edition,
+          v.variation || '',
+          v.finish === 'foil' ? 'Foil' : 'Non-foil',
+          c.grade,
+          c.equivalent,
+          c.usd,
+          c.sgd == null ? '' : c.sgd,
+          c.qty,
+          v.url || '',
+        ]);
+      }
+    }
+    const header = ['Card', 'Edition', 'Variation', 'Finish', 'Card Kingdom grade', 'Same as (SG stores)', 'Price (USD)', `Price (SGD, at ${rate ? Number(rate).toFixed(4) : '?'} per USD)`, 'In stock', 'Link'];
+    mtgCsv.download(`${mtgCsv.slug(card)}-card-kingdom-prices-${exportDate()}.csv`, mtgCsv.toCsv(header, rows));
+  });
+
   $('#refresh').addEventListener('click', () => currentCard && compare(currentCard.name || input.value.trim(), { refresh: true }));
 
   /* ---------------- Top 5 in each of the latest sets, row by row ---------------- */

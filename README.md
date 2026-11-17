@@ -47,6 +47,18 @@ it across the Singapore stores, or follow its TCGplayer link. Results are cached
 TCGplayer's own "trending" list isn't used: it's only available from TCGplayer's internal site API, which isn't
 meant for other apps, and TCGplayer's public API is closed to new developers.
 
+## Export to CSV
+
+After searching a card, visitors can download the results as CSV files (they open in Excel, Google Sheets or Numbers):
+
+- **All listings → Export CSV:** every store listing matching the current filters (not just the 20 on screen): card,
+  store, listing, set, set code, condition, finish, price (SGD), in stock, stock, link and when it was checked.
+- **Card Kingdom prices → Export CSV:** every version matching its filters, one row per condition, with USD and SGD prices.
+
+The files are built in the visitor's browser (`public/csv.js`), so nothing extra is sent or stored. They start with a
+UTF-8 byte-order mark so Excel shows accents and "S$" correctly, and text that a spreadsheet would treat as a formula
+(starting with `=`, `+`, `-` or `@`) is prefixed with an apostrophe so it can't run.
+
 ## Card Kingdom prices
 
 Each card page also shows what [Card Kingdom](https://www.cardkingdom.com/) **sells** every version of the card for
