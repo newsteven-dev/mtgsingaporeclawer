@@ -822,12 +822,54 @@
     if (b) choose(b.dataset.card);
   });
 
+  /* ---------------- Most played in Commander (EDHREC rank via Scryfall) ---------------- */
+
+  function mostPlayedCard(c) {
+    const tcg = c.tcgSgd != null ? `from ≈ ${money(c.tcgSgd)} <span class="muted">TCGplayer</span>` : '';
+    const ck = c.ckSgd != null ? `≈ ${money(c.ckSgd)} <span class="muted">Card Kingdom NM</span>` : '';
+    return `<li class="latest-card">
+      <button type="button" class="latest-pick" data-card="${esc(c.name)}" title="Compare ${esc(c.name)} across the Singapore stores">
+        ${c.image ? `<img src="${esc(c.image)}" alt="" loading="lazy" width="48" height="67" />` : ''}
+        <span class="latest-text">
+          <span class="latest-name"><span class="latest-rank-n">${c.position}</span> ${esc(c.name)}</span>
+          ${tcg ? `<span class="latest-price">${tcg}</span>` : ''}
+          ${ck ? `<span class="latest-price">${ck}</span>` : ''}
+          <span class="muted small">EDHREC #${esc(c.edhrecRank)}</span>
+        </span>
+      </button>
+      <a class="latest-tcg small" href="${esc(c.edhrecUrl)}" target="_blank" rel="noopener">EDHREC ↗</a>
+    </li>`;
+  }
+
+  async function loadMostPlayed() {
+    try {
+      const res = await fetch('/api/most-played');
+      const d = await res.json();
+      if (!res.ok || !(d.cards || []).length) return;
+      $('#most-played-list').innerHTML = d.cards.map(mostPlayedCard).join('');
+      const perUsd = d.usdSgd ? ` (about S$${Number(d.usdSgd).toFixed(2)} per US$1)` : '';
+      $('#most-played-note').textContent =
+        `The cards in the most Commander decks, basic lands left out. Popularity: EDHREC rank via Scryfall. ` +
+        `"From" is the cheapest printing's TCGplayer market price; Card Kingdom is its cheapest in-stock Near Mint copy${perUsd}. ` +
+        'Click a card to compare it in Singapore.';
+      $('#most-played').hidden = false;
+    } catch (err) {
+      console.warn('most played failed', err);
+    }
+  }
+
+  $('#most-played-list').addEventListener('click', (e) => {
+    const b = e.target.closest('.latest-pick');
+    if (b) choose(b.dataset.card);
+  });
+
   /* ---------------- Boot ---------------- */
 
   fetch('/api/stores')
     .then((r) => r.json())
     .then((s) => {
       stores = s;
+      loadMostPlayed();
       loadLatest();
       loadTrending();
       const initial = new URLSearchParams(location.search).get('card');

@@ -81,3 +81,17 @@ test('all recent sets come back row by row, newest first, ranked the same way', 
   assert.ok(r.rows.every((row) => row.cards.length === 5));
   assert.equal(r.rows[0].cards[0].name, 'Land A');
 });
+
+test('most played lists the top 8 Commander cards by EDHREC rank, skipping basics', async () => {
+  const r = await latest.mostPlayed();
+  const q = new URL(requested.filter((u) => u.includes('prefer')).pop());
+  assert.equal(q.searchParams.get('order'), 'edhrec');
+  assert.match(q.searchParams.get('q'), /legal:commander/);
+  assert.match(q.searchParams.get('q'), /-type:basic/);
+  assert.equal(r.cards.length, 8);
+  assert.deepEqual(
+    { position: r.cards[0].position, name: r.cards[0].name, edhrecRank: r.cards[0].edhrecRank, tcgSgd: r.cards[0].tcgSgd, image: r.cards[0].image },
+    { position: 1, name: 'Land A', edhrecRank: 10, tcgSgd: 50.34, image: 's.jpg' },
+  );
+  assert.equal(r.cards[0].edhrecUrl, 'https://edhrec.com/cards/land-a');
+});
