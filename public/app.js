@@ -17,7 +17,8 @@
   let searchToken = 0;
   let query = ''; // what was searched (may be part of a name)
   const PAGE_SIZE = 20; // rows shown at first, and added by each "Show next 20"
-  let tableLimit = PAGE_SIZE;
+  const LISTINGS_PAGE = 10; // listings rows shown at first, and added by each "Show next 10"
+  let tableLimit = LISTINGS_PAGE;
 
   const money = (n) => (n == null ? '—' : `S$${Number(n).toFixed(2)}`);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -134,7 +135,7 @@
 
     $('#main').hidden = false;
     results = Object.fromEntries(stores.map((s) => [s.id, { status: 'loading' }]));
-    tableLimit = PAGE_SIZE;
+    tableLimit = LISTINGS_PAGE;
     $('#f-card').value = '';
     query = name;
     render();
@@ -656,8 +657,8 @@
     const visible = rows.slice(0, tableLimit);
     const remaining = rows.length - visible.length;
     $('#table-more').hidden = remaining <= 0;
-    $('#table-more').textContent = `Show next ${Math.min(PAGE_SIZE, remaining)}`;
-    $('#table-shown').textContent = rows.length > PAGE_SIZE ? `Showing ${visible.length} of ${rows.length}` : '';
+    $('#table-more').textContent = `Show next ${Math.min(LISTINGS_PAGE, remaining)}`;
+    $('#table-shown').textContent = rows.length > LISTINGS_PAGE ? `Showing ${visible.length} of ${rows.length}` : '';
     $('#table tbody').innerHTML = rows.length
       ? visible
           .map(
@@ -677,7 +678,7 @@
   }
 
   $('#f-card').addEventListener('change', (e) => {
-    tableLimit = PAGE_SIZE;
+    tableLimit = LISTINGS_PAGE;
     const opt = e.target.selectedOptions[0];
     const name = e.target.value ? opt.textContent.replace(/ \(\d+ in stock\)$/, '') : query;
     render();
@@ -687,12 +688,12 @@
 
   ['#f-stock', '#f-finish', '#f-cond'].forEach((sel) =>
     $(sel).addEventListener('change', () => {
-      tableLimit = PAGE_SIZE;
+      tableLimit = LISTINGS_PAGE;
       render();
     }),
   );
   $('#table-more').addEventListener('click', () => {
-    tableLimit += PAGE_SIZE;
+    tableLimit += LISTINGS_PAGE;
     render();
   });
   /* ---------------- CSV export (runs in the browser; nothing is sent anywhere) ---------------- */
