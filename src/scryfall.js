@@ -29,16 +29,19 @@ function imageOf(card) {
   return null;
 }
 
-/** Canonical card details for the selected name. */
-async function cardInfo(name) {
-  const key = String(name || '').toLowerCase();
+/**
+ * Canonical card details for a name. With exactOnly, a name that isn't an exact card name
+ * (a broad search like "bolt") is a 404 instead of Scryfall's best guess.
+ */
+async function cardInfo(name, { exactOnly = false } = {}) {
+  const key = `${exactOnly ? 'exact' : 'any'}|${String(name || '').toLowerCase()}`;
   const hit = cardCache.get(key);
   if (hit) return hit;
   let card;
   try {
     card = await getJson(`${API}/cards/named?exact=${encodeURIComponent(name)}`, { headers: HEADERS });
   } catch (err) {
-    if (err.status !== 404) throw err;
+    if (err.status !== 404 || exactOnly) throw err;
     card = await getJson(`${API}/cards/named?fuzzy=${encodeURIComponent(name)}`, { headers: HEADERS });
   }
   const info = {

@@ -18,7 +18,7 @@ const latestset = require('./latestset');
 const geo = require('./geo');
 const movers = require('./movers');
 const seo = require('./seo');
-const { TtlCache } = require('./util');
+const { TtlCache, baseCardName } = require('./util');
 
 const PORT = Number(process.env.PORT || 3000);
 const CACHE_MINUTES = Number(process.env.CACHE_MINUTES || 10);
@@ -98,7 +98,7 @@ app.get('/api/autocomplete', async (req, res) => {
 app.get('/api/card', async (req, res) => {
   if (!req.query.name) return res.status(400).json({ error: 'name is required' });
   try {
-    res.json(await scryfall.cardInfo(req.query.name));
+    res.json(await scryfall.cardInfo(req.query.name, { exactOnly: req.query.exact === '1' }));
   } catch (err) {
     res.status(err.status === 404 ? 404 : 502).json({ error: err.message });
   }
@@ -232,7 +232,10 @@ async function getStorePrices(store, name, { refresh = false } = {}) {
     p = store.search(name).finally(() => inflight.delete(key));
     inflight.set(key, p);
   }
-  const listings = (await p).sort((a, b) => Number(b.inStock) - Number(a.inStock) || a.price - b.price);
+  // Searches are broad, so tag each listing with the card it is for ("Lightning Bolt FOIL [SLD]" -> "Lightning Bolt").
+  const listings = (await p)
+    .map((l) => ({ ...l, card: l.card || baseCardName(l.title) }))
+    .sort((a, b) => Number(b.inStock) - Number(a.inStock) || a.price - b.price);
   const payload = {
     store: store.id,
     storeName: store.name,
@@ -251,6 +254,8 @@ app.get('/api/prices', async (req, res) => {
   const name = String(req.query.name || '').trim();
   const store = stores.byId[req.query.store];
   if (!name) return res.status(400).json({ error: 'name is required' });
+  // Searches match every card containing the words, so very short ones would return far too much.
+  if (name.replace(/\s/g, '').length < 3) return res.status(400).json({ error: 'Type at least 3 letters to search.', listings: [] });
   if (!store) return res.status(400).json({ error: `unknown store; use one of ${Object.keys(stores.byId).join(', ')}` });
 
   const started = Date.now();

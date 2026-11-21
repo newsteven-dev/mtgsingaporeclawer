@@ -1,6 +1,6 @@
 'use strict';
 
-const { getJson, titleMatchesCard, toNumber, normalizeCondition } = require('../util');
+const { getJson, titleMatchesQuery, toNumber, normalizeCondition } = require('../util');
 
 const BASE = 'https://moxandlotus.sg';
 
@@ -24,7 +24,7 @@ function parseProducts(products, cardName) {
     if (p.category && p.category !== 'singles') continue;
     if (Number(p.hide) === 1) continue;
     const title = p.title || p.original_title || '';
-    if (!titleMatchesCard(p.original_title || title, cardName) && !titleMatchesCard(title, cardName)) continue;
+    if (!titleMatchesQuery(p.original_title || title, cardName) && !titleMatchesQuery(title, cardName)) continue;
     const finish = /foil/i.test(p.variation_code || '') ? 'foil' : 'nonfoil';
     const url = p.expansion_code && p.id ? `${BASE}/view/${encodeURIComponent(p.expansion_code)}/${p.id}` : searchPageUrl(cardName);
     const image = p.scryfall_id

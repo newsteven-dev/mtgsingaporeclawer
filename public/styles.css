@@ -247,6 +247,9 @@ code { font-size: 13px; }
 
 /* Top 5 in the newest set, under the search bar */
 .latest { margin-top: 18px; }
+.latest-bottom { padding-bottom: 40px; }
+.latest-bottom .latest { margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--border); }
+#f-card { max-width: 260px; }
 .latest-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .latest-head h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); }
 .latest-head h3 span { color: var(--text); }

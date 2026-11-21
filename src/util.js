@@ -69,6 +69,14 @@ function normalizeName(name) {
  */
 function baseCardName(title) {
   let t = String(title || '');
+  // Leading tags like "[Japanese] " or "[FCA] ".
+  t = t.replace(/^(\s*\[[^\]]*\]\s*)+/, '');
+  // Bilingual titles like "思考囲い | Thoughtseize": keep the part written in Latin letters.
+  if (t.includes('|')) {
+    const parts = t.split('|').map((x) => x.trim()).filter(Boolean);
+    const latin = parts.filter((x) => /[A-Za-z]/.test(x) && !/[぀-ヿ㐀-鿿가-힯]/.test(x));
+    if (latin.length) t = latin[latin.length - 1];
+  }
   // repeatedly drop trailing (...) and [...] groups
   let prev;
   do {
@@ -97,6 +105,20 @@ function titleMatchesCard(title, cardName) {
     if (base === faces[0]) return true;
   }
   return false;
+}
+
+/**
+ * Broad search: does this listing's card name contain every word of what was searched?
+ * "bolt" matches Lightning Bolt and Bolt Bend; "lightning" matches Chain Lightning too.
+ * Exact names (including a double-faced card's front face) always match.
+ */
+function titleMatchesQuery(title, query) {
+  if (titleMatchesCard(title, query)) return true;
+  const base = normalizeName(baseCardName(title));
+  const words = normalizeName(query)
+    .split(' ')
+    .filter((w) => w && w !== '//');
+  return Boolean(base) && words.length > 0 && words.every((w) => base.includes(w));
 }
 
 function toNumber(v) {
@@ -159,6 +181,7 @@ module.exports = {
   normalizeName,
   baseCardName,
   titleMatchesCard,
+  titleMatchesQuery,
   toNumber,
   normalizeCondition,
   mapLimit,

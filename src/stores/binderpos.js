@@ -6,7 +6,7 @@
  */
 
 const cheerio = require('cheerio');
-const { getText, titleMatchesCard, normalizeCondition } = require('../util');
+const { getText, titleMatchesQuery, normalizeCondition } = require('../util');
 
 /** Shopify's bot check ("Verifying your connection") instead of the real page. */
 function isBotCheck(html) {
@@ -84,7 +84,7 @@ function createBinderposStore({ id, name, base, maxPages = 6 }) {
     const out = [];
     for (const p of products) {
       if (p.type && !/single/i.test(p.type)) continue;
-      if (!titleMatchesCard(p.title, cardName)) continue;
+      if (!titleMatchesQuery(p.title, cardName)) continue;
       for (const v of p.variants) {
         if (!v.priceCents) continue;
         const isFoil = /foil/i.test(v.title);
