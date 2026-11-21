@@ -8,7 +8,7 @@
  */
 
 const cheerio = require('cheerio');
-const { getText, getJson, titleMatchesCard, normalizeCondition, mapLimit } = require('../util');
+const { getText, getJson, titleMatchesQuery, normalizeCondition, mapLimit } = require('../util');
 const { isBotCheck } = require('./binderpos');
 
 const BASE = 'https://www.flagshipgames.sg';
@@ -83,7 +83,7 @@ async function search(cardName) {
   const rest = await Promise.all(Array.from({ length: Math.max(0, pages - 1) }, (_, i) => getPage(cardName, i + 2)));
   const candidates = [first, ...rest]
     .flatMap((r) => r.products)
-    .filter((p) => titleMatchesCard(p.title, cardName))
+    .filter((p) => titleMatchesQuery(p.title, cardName))
     .slice(0, MAX_PRODUCTS);
 
   const products = await mapLimit(candidates, 4, (c) =>

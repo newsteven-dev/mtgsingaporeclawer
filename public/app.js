@@ -15,6 +15,7 @@
   let acController = null;
   let acTimer = null;
   let searchToken = 0;
+  let query = ''; // what was searched (may be part of a name)
   const PAGE_SIZE = 20; // rows shown at first, and added by each "Show next 20"
   let tableLimit = PAGE_SIZE;
 
@@ -104,13 +105,20 @@
     if (!list.hidden && activeIndex >= 0) return choose(suggestions[activeIndex]);
     const q = input.value.trim();
     if (!q) return;
-    // Prefer an exact suggestion, else the first suggestion, else what was typed.
+    // Searching is broad: what was typed finds every card whose name contains those words.
+    // If it is exactly a suggested card name, use that card's proper spelling.
+    if (q.replace(/\s/g, '').length < 3) return;
     const exact = suggestions.find((s) => s.toLowerCase() === q.toLowerCase());
-    choose(exact || suggestions[0] || q);
+    choose(exact || q);
   });
 
   function choose(name) {
     input.value = name;
+    // Cancel any suggestion lookup still on its way, so the list can't pop open again over the
+    // results (and an arrow key + Enter can't then pick a stale suggestion).
+    clearTimeout(acTimer);
+    if (acController) acController.abort();
+    suggestions = [];
     closeSuggestions();
     compare(name);
   }
@@ -127,16 +135,12 @@
     $('#main').hidden = false;
     results = Object.fromEntries(stores.map((s) => [s.id, { status: 'loading' }]));
     tableLimit = PAGE_SIZE;
+    $('#f-card').value = '';
+    query = name;
     render();
 
     // Card info from Scryfall (canonical name, image).
-    fetch(`/api/card?name=${encodeURIComponent(name)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((card) => {
-        if (token !== searchToken) return;
-        currentCard = card || { name };
-        renderCard();
-      });
+    loadCardInfo(name, token);
 
     loadCardKingdom(name, token);
 
@@ -242,7 +246,9 @@
     // Cheapest copy Card Kingdom actually has in stock (any version, any condition).
     const best = d.versions.filter((v) => v.cheapest).reduce((m, v) => (m && m.cheapest.usd <= v.cheapest.usd ? m : v), null);
     const local = cheapestLocal();
-    if (!d.versions.length) {
+    if (!d.versions.length && currentCard && currentCard.broad) {
+      headline.innerHTML = `Card Kingdom prices are shown for one card at a time: pick a card in the <strong>Card</strong> filter under All listings.`;
+    } else if (!d.versions.length) {
       headline.innerHTML = `Card Kingdom doesn't list this card. <a href="${esc(d.searchUrl)}" target="_blank" rel="noopener">Search Card Kingdom ↗</a>`;
     } else if (!best) {
       headline.innerHTML = `Card Kingdom is sold out of every version of this card right now.`;
@@ -509,19 +515,38 @@
     if (b) choose(b.dataset.card);
   });
 
+  /**
+   * Card details from Scryfall when the search is an exact card name; otherwise (e.g. "bolt")
+   * the page shows every matching card and no single card's picture.
+   */
+  function loadCardInfo(name, token) {
+    return fetch(`/api/card?name=${encodeURIComponent(name)}&exact=1`)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then((card) => {
+        if (token !== searchToken) return;
+        currentCard = card || { name, broad: true };
+        renderCard();
+        if (ck && ck.status === 'ok') renderCk();
+      });
+  }
+
   function renderCard() {
     const c = currentCard || {};
-    $('#card-name').textContent = c.name || '';
+    $('#card-broad').hidden = !c.broad;
+    $('#card-broad').textContent = c.broad ? 'Showing every card whose name contains these words. Pick one in the Card filter below to see just that card and its Card Kingdom prices.' : '';
+    $('#card-name').textContent = c.broad ? `Cards matching "${c.name}"` : c.name || '';
     $('#card-type').textContent = [c.typeLine, c.manaCost].filter(Boolean).join(' · ');
     $('#card-ref').textContent = c.usd ? `Scryfall reference (USD): $${c.usd}${c.usdFoil ? ` · foil $${c.usdFoil}` : ''}` : '';
     const img = $('#card-img');
     if (c.image) { img.src = c.image; img.alt = c.name; img.hidden = false; } else { img.hidden = true; }
-    $('#card-scryfall').href = c.scryfallUri || `https://scryfall.com/search?q=${encodeURIComponent(`!"${c.name}"`)}`;
+    $('#card-scryfall').href = c.scryfallUri || `https://scryfall.com/search?q=${encodeURIComponent(c.broad ? c.name : `!"${c.name}"`)}`;
     $('#card-gatherer').href = c.gathererUri || `https://gatherer.wizards.com/search?name=${encodeURIComponent(c.name || '')}`;
   }
 
   function filters() {
     return {
+      card: $('#f-card').value,
       stock: $('#f-stock').checked,
       finish: $('#f-finish').value,
       cond: $('#f-cond').value,
@@ -531,8 +556,39 @@
   function applyFilters(listings) {
     const f = filters();
     return listings.filter(
-      (l) => (!f.stock || l.inStock) && (!f.finish || l.finish === f.finish) && (!f.cond || l.condition === f.cond),
+      (l) =>
+        (!f.card || cardKey(l) === f.card) &&
+        (!f.stock || l.inStock) &&
+        (!f.finish || l.finish === f.finish) &&
+        (!f.cond || l.condition === f.cond),
     );
+  }
+
+  const cardKey = (l) => String(l.card || l.title || '').toLowerCase();
+
+  /** Fill the Card filter with every card the search found (in-stock count first), keeping the choice. */
+  function renderCardFilter() {
+    const counts = new Map();
+    for (const s of stores) {
+      const r = results[s.id];
+      if (r?.status !== 'ok') continue;
+      for (const l of r.data.listings) {
+        const k = cardKey(l);
+        if (!k) continue;
+        const e = counts.get(k) || { name: l.card || l.title, listings: 0, inStock: 0 };
+        e.listings++;
+        if (l.inStock) e.inStock++;
+        counts.set(k, e);
+      }
+    }
+    const sel = $('#f-card');
+    const keep = sel.value;
+    const opts = [...counts.entries()].sort((a, b) => b[1].inStock - a[1].inStock || a[1].name.localeCompare(b[1].name));
+    sel.innerHTML =
+      `<option value="">All matching cards (${opts.length})</option>` +
+      opts.map(([k, e]) => `<option value="${esc(k)}">${esc(e.name)} (${e.inStock} in stock)</option>`).join('');
+    sel.value = counts.has(keep) ? keep : '';
+    sel.closest('label').hidden = opts.length < 2 && !keep;
   }
 
   /** Every listing from the stores that answered, matching the filters, cheapest first. */
@@ -592,6 +648,7 @@
 
     // Combined table
     const nameOf = Object.fromEntries(stores.map((s) => [s.id, s.name]));
+    renderCardFilter();
     const rows = filteredListings();
     $('#export-listings').disabled = !rows.length;
 
@@ -619,6 +676,15 @@
     if (ck && ck.status === 'ok') renderCk(); // keep the "cheapest in Singapore" comparison current
   }
 
+  $('#f-card').addEventListener('change', (e) => {
+    tableLimit = PAGE_SIZE;
+    const opt = e.target.selectedOptions[0];
+    const name = e.target.value ? opt.textContent.replace(/ \(\d+ in stock\)$/, '') : query;
+    render();
+    loadCardInfo(name, searchToken);
+    loadCardKingdom(name, searchToken);
+  });
+
   ['#f-stock', '#f-finish', '#f-cond'].forEach((sel) =>
     $(sel).addEventListener('change', () => {
       tableLimit = PAGE_SIZE;
@@ -638,7 +704,7 @@
     const card = cardLabel();
     const nameOf = Object.fromEntries(stores.map((s) => [s.id, s.name]));
     const rows = filteredListings().map((l) => [
-      card,
+      l.card || card,
       nameOf[l.store] || l.store,
       l.title,
       l.set || '',

@@ -207,3 +207,25 @@ test('flagship reads handles from search results and conditions from product JSO
   );
   assert.deepEqual(flagship._parseProduct({ type: 'Booster Box', variants: [{ price: 100 }] }), []);
 });
+
+test('broad search: every card whose name contains all the words', () => {
+  const { titleMatchesQuery } = require('../src/util');
+  assert.ok(titleMatchesQuery('Lightning Bolt [Masters 25]', 'bolt'));
+  assert.ok(titleMatchesQuery('Bolt Bend', 'bolt'));
+  assert.ok(titleMatchesQuery('Chain Lightning', 'lightning'));
+  assert.ok(titleMatchesQuery('Lightning Helix (Ravnica)', 'light'), 'part of a word counts');
+  assert.ok(titleMatchesQuery('Lightning Bolt FOIL [Secret Lair - 085]', 'bolt lightning'), 'word order does not matter');
+  assert.ok(titleMatchesQuery('Delver of Secrets [Innistrad]', 'Delver of Secrets // Insectile Aberration'), 'exact front face still matches');
+  assert.ok(titleMatchesQuery('Aether Vial', 'Æther Vial'));
+  assert.ok(!titleMatchesQuery('Lightning Helix', 'bolt'));
+  assert.ok(!titleMatchesQuery('Counterspell', 'lightning bolt'));
+  assert.ok(!titleMatchesQuery('', 'bolt'));
+});
+
+test('card names are cleaned of leading tags and foreign-language halves', () => {
+  assert.equal(baseCardName('[Japanese] 思考囲い | Thoughtseize'), 'Thoughtseize');
+  assert.equal(baseCardName('[Japanese] 思考囲い | Thoughtseize (Foil)'), 'Thoughtseize');
+  assert.equal(baseCardName('[FCA] Lightning Bolt'), 'Lightning Bolt');
+  assert.ok(titleMatchesCard('[Japanese] 思考囲い | Thoughtseize', 'Thoughtseize'), 'Japanese printings count as the card');
+  assert.equal(baseCardName('Emeritus of Woe // Demonic Tutor'), 'Emeritus of Woe // Demonic Tutor', 'double-faced names are untouched');
+});

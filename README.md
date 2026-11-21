@@ -219,10 +219,17 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 ## How it works
 
 - `public/` is the web page. While you type, it asks `/api/autocomplete` for suggestions (debounced; ↑/↓, Tab and Enter work).
-- When you pick a card, the page sends one `/api/prices?store=<id>&name=<card>` request per store in parallel, so each store's tile fills in as soon as that store answers.
+- Searches are **broad**: typing part of a name (e.g. "bolt") returns every card whose name contains all the words
+  (Lightning Bolt, Rift Bolt, Bolt Bend, …). A **Card** filter lists each matching card with its in-stock count to
+  narrow down, and picking one there also loads its picture and Card Kingdom prices. Picking a suggestion searches that
+  card. Searches need at least 3 letters.
+- The page sends one `/api/prices?store=<id>&name=<search>` request per store in parallel, so each store's tile fills in
+  as soon as that store answers. Each listing comes back with a `card` field (its card name without set, foil or
+  language tags) used by the Card filter and the CSV export.
 - `src/stores/*.js` holds one adapter per shop. Each returns listings shaped like
   `{ title, set, setCode, condition, finish, price, stock, inStock, url, image }`.
-  Titles are matched exactly against the Scryfall card name (so `Lightning Bolt` doesn't pull in `Chain Lightning`).
+  Listing titles are matched against the search words (`titleMatchesQuery`); Card Kingdom and the price movers
+  report still match exact card names (`titleMatchesCard`).
 - Results are cached in memory for 10 minutes (`CACHE_MINUTES`). The **Refresh prices** button skips the cache.
 
 ### API

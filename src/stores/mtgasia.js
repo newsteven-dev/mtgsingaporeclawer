@@ -1,6 +1,6 @@
 'use strict';
 
-const { getJson, titleMatchesCard, toNumber, normalizeCondition } = require('../util');
+const { getJson, titleMatchesQuery, toNumber, normalizeCondition } = require('../util');
 
 const BASE = 'https://mtg-asia.com';
 // Public Base44 app id embedded in the storefront's index.html.
@@ -35,7 +35,7 @@ function parseItems(data, cardName) {
   const items = Array.isArray(data) ? data : data?.items || [];
   const out = [];
   for (const it of items) {
-    if (!titleMatchesCard(it.name, cardName)) continue;
+    if (!titleMatchesQuery(it.name, cardName)) continue;
     const price = toNumber(it.selling_price);
     if (!price) continue;
     const stock = Number(it.qty_available || 0);

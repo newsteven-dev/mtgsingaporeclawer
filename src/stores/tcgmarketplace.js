@@ -1,7 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const { getJson, titleMatchesCard, toNumber, normalizeCondition } = require('../util');
+const { getJson, titleMatchesQuery, toNumber, normalizeCondition } = require('../util');
 
 const SITE = 'https://thetcgmarketplace.com';
 // The React storefront talks to its API on port 3501 (SG region).
@@ -57,7 +57,7 @@ function parseResults(rows, cardName) {
     if (!r || r.name === 'No results') continue;
     // Names come back as " [FCA] Lightning Bolt": drop the leading set-code tag.
     const title = String(first(r, ['card_name', 'name', 'crd_name', 'title']) || '').replace(/^\s*\[[^\]]*\]\s*/, '').trim();
-    if (!title || !titleMatchesCard(title, cardName)) continue;
+    if (!title || !titleMatchesQuery(title, cardName)) continue;
     const price = toNumber(first(r, ['from', 'lowest_price', 'min_price', 'price', 'selling_price', 'highest_price']));
     if (!price) continue;
     const stock = Number(first(r, ['available', 'qty', 'quantity', 'total_qty', 'stock']) || 0);
@@ -98,7 +98,7 @@ async function search(cardName) {
   // suggestion dropdown and has no prices).
   const rows = await post('product/advancedfilter', {
     category_id: categoryId,
-    name_exact_match: true,
+    name_exact_match: false, // broad search: every card whose name contains the words
     available_only: false,
     name: cardName,
   });

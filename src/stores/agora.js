@@ -1,7 +1,7 @@
 'use strict';
 
 const cheerio = require('cheerio');
-const { getText, titleMatchesCard, toNumber, normalizeCondition } = require('../util');
+const { getText, titleMatchesQuery, toNumber, normalizeCondition } = require('../util');
 
 const BASE = 'https://agorahobby.com';
 const PER_PAGE = 30;
@@ -67,7 +67,7 @@ async function search(cardName) {
   const all = [first, ...rest].flatMap((p) => p.items);
   const link = searchUrl(cardName);
   return all
-    .filter((it) => titleMatchesCard(it.title, cardName))
+    .filter((it) => titleMatchesQuery(it.title, cardName))
     .map((it) => ({
       title: it.title,
       set: it.set || it.setCode,
