@@ -41,7 +41,7 @@ automated requests, so the ranking comes from Scryfall's data.
 
 ## Top 5 in the last 4 sets
 
-At the bottom of the main page, below the most played cards, the page shows the top 5 cards of each of the last 4 Magic sets (the most recent paper
+Before a search (it is hidden once results are shown), at the bottom of the main page, below the most played cards, the page shows the top 5 cards of each of the last 4 Magic sets (the most recent paper
 expansion or core sets on Scryfall), one row per set with the newest at the top. On phones each row scrolls sideways.
 One switch ranks every row by:
 

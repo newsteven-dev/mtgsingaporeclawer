@@ -324,3 +324,5 @@ code { font-size: 13px; }
   .bar-value { grid-column: 3; grid-row: 1; text-align: right; }
   .bar-track { grid-column: 2 / span 2; grid-row: 2; }
 }
+/* Once a search has returned results, the per-set top 5 is hidden to keep the page short. */
+#main:not([hidden]) ~ .latest-bottom #latest { display: none; }
