@@ -185,6 +185,9 @@ tr:last-child td { border-bottom: 0; }
 .logo a { display: inline-block; border-radius: 8px; }
 .logo img { display: block; width: 380px; max-width: 100%; height: auto; }
 @media (max-width: 420px) { .logo img { width: 270px; } }
+p.logo { margin: 0 0 12px; }
+.login-card .logo { margin: 0 0 12px; }
+.login-card .logo img { width: 100%; max-width: 340px; }
 .signin-btn {
   display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 10px;
   background: #24292f; color: #fff; font-weight: 600; font-size: 14px; text-decoration: none;
