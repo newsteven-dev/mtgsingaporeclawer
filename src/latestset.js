@@ -12,7 +12,7 @@
  */
 
 const { getJson, TtlCache } = require('./util');
-const { usdToSgd, topInEdition, cheapestNm } = require('./cardkingdom');
+const { usdToSgd, topInEdition, cheapestNm, landedSgd, COSTS } = require('./cardkingdom');
 
 const HEADERS = { 'User-Agent': 'MTGSGPriceCompare/1.0', Accept: 'application/json' };
 const API = 'https://api.scryfall.com';
@@ -89,7 +89,7 @@ async function topAtCardKingdom(set) {
     nmQty: r.nmQty,
     link: { label: 'Card Kingdom', url: r.url },
   }));
-  return { rank: 'ck', set, cards, usdSgd: fx.rate || null, updatedAt: new Date().toISOString() };
+  return { rank: 'ck', set, cards, usdSgd: fx.rate || null, costs: COSTS, updatedAt: new Date().toISOString() };
 }
 
 /**
@@ -130,13 +130,13 @@ async function topCards(rank = 'price', setCode = '') {
         image: imageOf(c),
         usd,
         foilOnly: Boolean(!c.prices.usd && c.prices.usd_foil),
-        sgd: usd && fx.rate ? Math.round(usd * fx.rate * 100) / 100 : null,
+        sgd: landedSgd(usd, fx.rate),
         edhrecRank: c.edhrec_rank || null,
         tcgplayerUrl: tcgplayerSearch(c.name),
         link: { label: 'TCGplayer', url: tcgplayerSearch(c.name) },
       };
     });
-  const out = { rank: by, set, sets, cards, usdSgd: fx.rate || null, updatedAt: new Date().toISOString() };
+  const out = { rank: by, set, sets, cards, usdSgd: fx.rate || null, costs: COSTS, updatedAt: new Date().toISOString() };
   cache.set(key, out);
   return out;
 }
@@ -155,6 +155,7 @@ async function topCardsAllSets(rank = 'price') {
     rank: ok ? ok.value.rank : rank,
     rows,
     usdSgd: ok ? ok.value.usdSgd : null,
+    costs: COSTS,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -193,7 +194,7 @@ async function mostPlayed() {
   const [res, fx] = await Promise.all([getJson(`${API}/cards/search?${q}`, { headers: HEADERS }), usdToSgd()]);
   const top = (res.data || []).filter((c) => c.edhrec_rank).slice(0, MOST_PLAYED_MAX);
   const ck = await cheapestNm(top.map((c) => c.name)).catch(() => ({}));
-  const sgd = (usd) => (usd != null && fx.rate ? Math.round(usd * fx.rate * 100) / 100 : null);
+  const sgd = (usd) => landedSgd(usd, fx.rate);
   const cards = top.map((c, i) => {
     const usd = Number(c.prices && c.prices.usd) || null;
     const k = ck[c.name] || null;
@@ -212,7 +213,7 @@ async function mostPlayed() {
       edhrecUrl: `https://edhrec.com/cards/${encodeURIComponent(c.name.split(' // ')[0].toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''))}`,
     };
   });
-  const out = { cards, usdSgd: fx.rate || null, updatedAt: new Date().toISOString() };
+  const out = { cards, usdSgd: fx.rate || null, costs: COSTS, updatedAt: new Date().toISOString() };
   cache.set('mostPlayed', out);
   return out;
 }

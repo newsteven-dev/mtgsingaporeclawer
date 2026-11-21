@@ -119,7 +119,7 @@ async function compareCard(card, set, ck, rate, getStorePrices) {
     for (const l of listings) {
       const ref = ckPriceFor(ck, l.condition || 'NM');
       if (!ref || !rate) continue;
-      const ckSgd = Math.round(ref.usd * rate * 100) / 100;
+      const ckSgd = cardkingdom.landedSgd(ref.usd, rate);
       const ratio = l.price / ckSgd;
       if (ratio < BARGAIN_RATIO) {
         bargains.push({
@@ -186,7 +186,7 @@ async function buildReport(getStorePrices) {
       image: found[i] ? latestset.imageOf(found[i]) : null,
       ckUrl: ck.url || (p.mover && p.mover.ck_url) || null,
       ckNmUsd: nm ?? null,
-      ckNmSgd: nm != null && rate ? Math.round(nm * rate * 100) / 100 : null,
+      ckNmSgd: cardkingdom.landedSgd(nm, rate),
       mover: p.mover && {
         oldUsd: Number(p.mover.old_usd),
         newUsd: Number(p.mover.new_usd),
@@ -206,6 +206,7 @@ async function buildReport(getStorePrices) {
     bargainRatio: BARGAIN_RATIO,
     history: days && days.days ? { firstDay: days.first_day, lastDay: days.last_day, days: Number(days.days) } : null,
     usdSgd: rate || null,
+    costs: cardkingdom.COSTS,
     cards,
     bargains: cards.flatMap((c) => c.bargains.map((b) => ({ card: c.name, ...b }))).sort((a, b) => a.pctOfCk - b.pctOfCk),
     generatedAt: new Date().toISOString(),

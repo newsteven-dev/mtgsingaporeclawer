@@ -400,7 +400,7 @@ function renderMovers(r) {
     : `<tr><td colspan="8" class="muted">No in-stock listings of these cards are under ${Math.round(r.bargainRatio * 100)}% of Card Kingdom's price right now.</td></tr>`;
 
   $('#movers-note').textContent =
-    `Card Kingdom prices are converted at about S$${r.usdSgd ? Number(r.usdSgd).toFixed(2) : '?'} per US$1 and don't include shipping from the US. ` +
+    `Card Kingdom prices are converted at about S$${r.usdSgd ? Number(r.usdSgd).toFixed(2) : '?'} per US$1, plus 10% tax and S$0.40 shipping per card. ` +
     `Card Kingdom grades EX, VG and G are compared with LP, MP and HP. Store prices are cached for up to 10 minutes; this report refreshes every 10 minutes.`;
 }
 
