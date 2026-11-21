@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 56" width="420" height="56" role="img" aria-label="MTG SG Price Compare">
+  <style>
+    .word { fill: #1d1c1a; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-weight: 700; }
+    .accent { fill: #b3261e; }
+    @media (prefers-color-scheme: dark) { .word { fill: #ece9e4; } .accent { fill: #e0594f; } }
+  </style>
+  <g transform="translate(0 0) scale(0.875)">
+    <rect width="64" height="64" rx="14" fill="#b3261e"/>
+    <rect x="14" y="10" width="26" height="36" rx="4" fill="#ffffff" opacity="0.55" transform="rotate(-10 27 28)"/>
+    <rect x="22" y="14" width="28" height="38" rx="4" fill="#ffffff"/>
+    <text x="36" y="40" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#b3261e">S$</text>
+  </g>
+  <text x="68" y="38" font-size="27" class="word" textLength="345" lengthAdjust="spacing">MTG <tspan class="accent">SG</tspan> Price Compare</text>
+</svg>
