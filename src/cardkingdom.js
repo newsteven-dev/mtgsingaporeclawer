@@ -306,4 +306,28 @@ async function priceListDate() {
   return m ? m[1] : null;
 }
 
-module.exports = { sellPrices, ensureLoaded, usdToSgd, topInEdition, editionCards, priceListDate, _createRecordScanner: createRecordScanner, _slim: slim };
+/**
+ * Card Kingdom's cheapest in-stock Near Mint non-foil copy of each card (any edition), as
+ * { usd, url } keyed by the name given, or null when Card Kingdom has none in stock.
+ */
+async function cheapestNm(names) {
+  const idx = await ensureLoaded();
+  const out = {};
+  for (const name of names) {
+    const want = normalizeName(name);
+    let best = null;
+    for (const k of keysFor(name)) {
+      for (const e of idx.get(k) || []) {
+        const n = normalizeName(e.name);
+        if (n !== want && n.split('//')[0].trim() !== want && n !== want.split('//')[0].trim()) continue;
+        const nm = e.conds[0];
+        if (e.foil || !nm || !nm[1]) continue; // non-foil, NM in stock
+        if (!best || nm[0] < best.usd) best = { usd: nm[0], url: e.url };
+      }
+    }
+    out[name] = best;
+  }
+  return out;
+}
+
+module.exports = { sellPrices, ensureLoaded, usdToSgd, topInEdition, editionCards, priceListDate, cheapestNm, _createRecordScanner: createRecordScanner, _slim: slim };

@@ -12,7 +12,7 @@
  */
 
 const { getJson, TtlCache } = require('./util');
-const { usdToSgd, topInEdition } = require('./cardkingdom');
+const { usdToSgd, topInEdition, cheapestNm } = require('./cardkingdom');
 
 const HEADERS = { 'User-Agent': 'MTGSGPriceCompare/1.0', Accept: 'application/json' };
 const API = 'https://api.scryfall.com';
@@ -175,4 +175,46 @@ async function setTcgPrices(setCode) {
   return out;
 }
 
-module.exports = { topCards, topCardsAllSets, newestSet, recentSets, scryfallCardsFor, setTcgPrices, imageOf };
+const MOST_PLAYED_MAX = 8;
+
+/**
+ * The most played Commander cards overall, by EDHREC rank as published by Scryfall
+ * (basic lands left out). Each card's price is its cheapest printing's TCGplayer market price
+ * (Scryfall's prefer:usd-low), plus Card Kingdom's cheapest in-stock NM copy. Cached 6 hours.
+ */
+async function mostPlayed() {
+  const hit = cache.get('mostPlayed');
+  if (hit) return hit;
+  const q = new URLSearchParams({
+    q: 'legal:commander game:paper -type:basic prefer:usd-low',
+    order: 'edhrec',
+    unique: 'cards',
+  });
+  const [res, fx] = await Promise.all([getJson(`${API}/cards/search?${q}`, { headers: HEADERS }), usdToSgd()]);
+  const top = (res.data || []).filter((c) => c.edhrec_rank).slice(0, MOST_PLAYED_MAX);
+  const ck = await cheapestNm(top.map((c) => c.name)).catch(() => ({}));
+  const sgd = (usd) => (usd != null && fx.rate ? Math.round(usd * fx.rate * 100) / 100 : null);
+  const cards = top.map((c, i) => {
+    const usd = Number(c.prices && c.prices.usd) || null;
+    const k = ck[c.name] || null;
+    return {
+      position: i + 1,
+      name: c.name,
+      edhrecRank: c.edhrec_rank,
+      typeLine: c.type_line,
+      image: imageOf(c),
+      tcgUsd: usd,
+      tcgSgd: sgd(usd),
+      tcgSet: c.set_name,
+      ckUsd: k ? k.usd : null,
+      ckSgd: k ? sgd(k.usd) : null,
+      ckUrl: k ? k.url : null,
+      edhrecUrl: `https://edhrec.com/cards/${encodeURIComponent(c.name.split(' // ')[0].toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''))}`,
+    };
+  });
+  const out = { cards, usdSgd: fx.rate || null, updatedAt: new Date().toISOString() };
+  cache.set('mostPlayed', out);
+  return out;
+}
+
+module.exports = { topCards, topCardsAllSets, newestSet, recentSets, scryfallCardsFor, setTcgPrices, imageOf, mostPlayed };

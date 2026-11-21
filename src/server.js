@@ -135,6 +135,15 @@ app.get('/api/latest-set', async (req, res) => {
   }
 });
 
+/** Most played Commander cards (EDHREC rank via Scryfall): GET /api/most-played (public, cached 6 hours). */
+app.get('/api/most-played', async (_req, res) => {
+  try {
+    res.json(await latestset.mostPlayed());
+  } catch (err) {
+    res.status(502).json({ error: err.message, cards: [] });
+  }
+});
+
 /** Card Kingdom retail (sell) prices for every version of a card: GET /api/cardkingdom?name=Lightning%20Bolt */
 app.get('/api/cardkingdom', async (req, res) => {
   const name = String(req.query.name || '').trim();

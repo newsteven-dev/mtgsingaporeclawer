@@ -64,3 +64,11 @@ test("the snapshot date is the Card Kingdom price list's own date", async () => 
   const ck = require('../src/cardkingdom');
   assert.equal(await ck.priceListDate(), '2026-11-11');
 });
+
+test('cheapestNm finds the cheapest in-stock NM non-foil copy across editions', async () => {
+  const ck = require('../src/cardkingdom');
+  const r = await ck.cheapestNm(['Big Mythic', 'Card A', 'Missing Card']);
+  assert.deepEqual(r['Big Mythic'], { usd: 64.99, url: 'https://www.cardkingdom.com/mtg/reality-fracture/big-mythic' });
+  assert.equal(r['Card A'], null, 'Card A has no NM stock');
+  assert.equal(r['Missing Card'], null);
+});
