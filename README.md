@@ -263,8 +263,9 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 
 Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`, `flagship`, `gameshaven`.
 
-After a search, **All listings** comes first, right below the search bar, followed by the card, the
-**Cheapest per store** boxes, Card Kingdom prices and price history.
+After a search that matches one card exactly, that card's picture and details come first, right below the
+search bar. **All listings** follows (first, for a broad search like "bolt"), then the **Cheapest per store**
+boxes, Card Kingdom prices and price history.
 
 The **Cheapest per store** boxes are ordered by price: the store with the cheapest in-stock copy comes first,
 then stores still loading, then stores with nothing in stock or that couldn't be reached.

@@ -138,6 +138,7 @@
     tableLimit = LISTINGS_PAGE;
     $('#f-card').value = '';
     query = name;
+    $('#card-head').hidden = true; // shown again once the search matches a card exactly
     render();
 
     // Card info from Scryfall (canonical name, image).
@@ -534,8 +535,10 @@
 
   function renderCard() {
     const c = currentCard || {};
+    // The card's picture and details show just below the search bar only when the search matches one card.
+    $('#card-head').hidden = !c.name || Boolean(c.broad);
     $('#card-broad').hidden = !c.broad;
-    $('#card-broad').textContent = c.broad ? 'Showing every card whose name contains these words. Pick one in the Card filter below to see just that card and its Card Kingdom prices.' : '';
+    $('#card-broad').textContent = c.broad ? 'Showing every card whose name contains these words. Pick one in the Card filter above to see just that card and its Card Kingdom prices.' : '';
     $('#card-name').textContent = c.broad ? `Cards matching "${c.name}"` : c.name || '';
     $('#card-type').textContent = [c.typeLine, c.manaCost].filter(Boolean).join(' · ');
     $('#card-ref').textContent = c.usd ? `Scryfall reference (USD): $${c.usd}${c.usdFoil ? ` · foil $${c.usdFoil}` : ''}` : '';

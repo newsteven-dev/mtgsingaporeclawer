@@ -42,6 +42,16 @@
   </header>
 
   <main class="wrap" id="main" hidden>
+    <section id="card-head" class="card-head" hidden>
+      <img id="card-img" alt="" />
+      <div>
+        <h2 id="card-name"></h2>
+        <p id="card-type" class="muted"></p>
+        <p id="card-ref" class="muted"></p>
+        <p class="links"><a id="card-scryfall" target="_blank" rel="noopener">Scryfall</a> · <a id="card-gatherer" target="_blank" rel="noopener">Gatherer</a></p>
+      </div>
+    </section>
+
     <section id="listings">
       <div class="filters">
         <h3>All listings <span id="count" class="muted"></span></h3>
@@ -58,6 +68,7 @@
         <button type="button" id="refresh" class="ghost">Refresh prices</button>
         <button type="button" id="export-listings" class="ghost" disabled title="Download every listing that matches the filters as a CSV file">Export CSV</button>
       </div>
+      <p id="card-broad" class="muted" hidden></p>
       <div class="table-wrap">
         <table id="table">
           <thead><tr><th>Price</th><th>Store</th><th>Card / printing</th><th>Cond.</th><th>Finish</th><th>Stock</th><th></th></tr></thead>
@@ -67,17 +78,6 @@
       <p class="pager"><button type="button" id="table-more" class="ghost" hidden></button> <span id="table-shown" class="muted small"></span></p>
       <p class="muted small">Prices in SGD as listed by each store. Store pages change over time; always confirm on the store before buying. TCG Marketplace shows the lowest seller price.</p>
       <p class="muted small">Searches are saved with an approximate location (city or district) worked out from your internet address, to see where cards are being searched. Your address itself isn't stored. <a href="https://db-ip.com" target="_blank" rel="noopener">IP geolocation by DB-IP</a>.</p>
-    </section>
-
-    <section class="card-head">
-      <img id="card-img" alt="" />
-      <div>
-        <h2 id="card-name"></h2>
-        <p id="card-broad" class="muted" hidden></p>
-        <p id="card-type" class="muted"></p>
-        <p id="card-ref" class="muted"></p>
-        <p class="links"><a id="card-scryfall" target="_blank" rel="noopener">Scryfall</a> · <a id="card-gatherer" target="_blank" rel="noopener">Gatherer</a></p>
-      </div>
     </section>
 
     <section>
