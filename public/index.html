@@ -42,6 +42,33 @@
   </header>
 
   <main class="wrap" id="main" hidden>
+    <section id="listings">
+      <div class="filters">
+        <h3>All listings <span id="count" class="muted"></span></h3>
+        <label>Card
+          <select id="f-card"><option value="">All matching cards</option></select>
+        </label>
+        <label><input type="checkbox" id="f-stock" checked /> In stock only</label>
+        <label>Finish
+          <select id="f-finish"><option value="">Any</option><option value="nonfoil">Non-foil</option><option value="foil">Foil</option></select>
+        </label>
+        <label>Condition
+          <select id="f-cond"><option value="">Any</option><option>NM</option><option>LP</option><option>MP</option><option>HP</option><option>DMG</option></select>
+        </label>
+        <button type="button" id="refresh" class="ghost">Refresh prices</button>
+        <button type="button" id="export-listings" class="ghost" disabled title="Download every listing that matches the filters as a CSV file">Export CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table id="table">
+          <thead><tr><th>Price</th><th>Store</th><th>Card / printing</th><th>Cond.</th><th>Finish</th><th>Stock</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="pager"><button type="button" id="table-more" class="ghost" hidden></button> <span id="table-shown" class="muted small"></span></p>
+      <p class="muted small">Prices in SGD as listed by each store. Store pages change over time; always confirm on the store before buying. TCG Marketplace shows the lowest seller price.</p>
+      <p class="muted small">Searches are saved with an approximate location (city or district) worked out from your internet address, to see where cards are being searched. Your address itself isn't stored. <a href="https://db-ip.com" target="_blank" rel="noopener">IP geolocation by DB-IP</a>.</p>
+    </section>
+
     <section class="card-head">
       <img id="card-img" alt="" />
       <div>
@@ -95,32 +122,6 @@
       </div>
     </section>
 
-    <section>
-      <div class="filters">
-        <h3>All listings <span id="count" class="muted"></span></h3>
-        <label>Card
-          <select id="f-card"><option value="">All matching cards</option></select>
-        </label>
-        <label><input type="checkbox" id="f-stock" checked /> In stock only</label>
-        <label>Finish
-          <select id="f-finish"><option value="">Any</option><option value="nonfoil">Non-foil</option><option value="foil">Foil</option></select>
-        </label>
-        <label>Condition
-          <select id="f-cond"><option value="">Any</option><option>NM</option><option>LP</option><option>MP</option><option>HP</option><option>DMG</option></select>
-        </label>
-        <button type="button" id="refresh" class="ghost">Refresh prices</button>
-        <button type="button" id="export-listings" class="ghost" disabled title="Download every listing that matches the filters as a CSV file">Export CSV</button>
-      </div>
-      <div class="table-wrap">
-        <table id="table">
-          <thead><tr><th>Price</th><th>Store</th><th>Card / printing</th><th>Cond.</th><th>Finish</th><th>Stock</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <p class="pager"><button type="button" id="table-more" class="ghost" hidden></button> <span id="table-shown" class="muted small"></span></p>
-      <p class="muted small">Prices in SGD as listed by each store. Store pages change over time; always confirm on the store before buying. TCG Marketplace shows the lowest seller price.</p>
-      <p class="muted small">Searches are saved with an approximate location (city or district) worked out from your internet address, to see where cards are being searched. Your address itself isn't stored. <a href="https://db-ip.com" target="_blank" rel="noopener">IP geolocation by DB-IP</a>.</p>
-    </section>
   </main>
 
   <div class="wrap latest-bottom">
