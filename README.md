@@ -60,7 +60,7 @@ meant for other apps, and TCGplayer's public API is closed to new developers.
 
 After searching a card, visitors can download the results as CSV files (they open in Excel, Google Sheets or Numbers):
 
-- **All listings → Export CSV:** every store listing matching the current filters (not just the 20 on screen): card,
+- **All listings → Export CSV:** every store listing matching the current filters (not just the 10 on screen): card,
   store, listing, set, set code, condition, finish, price (SGD), in stock, stock, link and when it was checked.
 - **Card Kingdom prices → Export CSV:** every version matching its filters, one row per condition, with USD and SGD prices.
 
