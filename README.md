@@ -41,7 +41,7 @@ automated requests, so the ranking comes from Scryfall's data.
 
 ## Top 5 in the last 4 sets
 
-At the bottom of the main page, below the most played cards, the page shows the top 5 cards of each of the last 4 Magic sets (the most recent paper
+Before a search (it is hidden once results are shown), at the bottom of the main page, below the most played cards, the page shows the top 5 cards of each of the last 4 Magic sets (the most recent paper
 expansion or core sets on Scryfall), one row per set with the newest at the top. On phones each row scrolls sideways.
 One switch ranks every row by:
 
@@ -263,8 +263,9 @@ Any host that runs Node.js works the same way: build with `npm ci`, start with `
 
 Store ids: `agora`, `mtgasia`, `moxandlotus`, `tcgmarketplace`, `greyogre`, `flagship`, `gameshaven`.
 
-After a search, **All listings** comes first, right below the search bar, followed by the card, the
-**Cheapest per store** boxes, Card Kingdom prices and price history.
+After a search that matches one card exactly, that card's picture and details come first, right below the
+search bar. **All listings** follows (first, for a broad search like "bolt"), then the **Cheapest per store**
+boxes, Card Kingdom prices and price history.
 
 The **Cheapest per store** boxes are ordered by price: the store with the cheapest in-stock copy comes first,
 then stores still loading, then stores with nothing in stock or that couldn't be reached.
