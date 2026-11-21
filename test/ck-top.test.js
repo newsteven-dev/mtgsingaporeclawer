@@ -51,7 +51,7 @@ test('Card Kingdom top 5 ranks the set\'s regular non-foil printings by NM price
   assert.deepEqual(r.cards.map((c) => c.name), ['Big Mythic', 'Card A', 'Card B', 'Card C', 'Card D']);
   assert.deepEqual(
     { usd: r.cards[0].usd, sgd: r.cards[0].sgd, nmQty: r.cards[0].nmQty, image: r.cards[0].image, link: r.cards[0].link },
-    { usd: 64.99, sgd: 84.49, nmQty: 8, image: 'Big Mythic.jpg', link: { label: 'Card Kingdom', url: 'https://www.cardkingdom.com/mtg/reality-fracture/big-mythic' } },
+    { usd: 64.99, sgd: 93.34, nmQty: 8, image: 'Big Mythic.jpg', link: { label: 'Card Kingdom', url: 'https://www.cardkingdom.com/mtg/reality-fracture/big-mythic' } },
   );
 });
 
@@ -71,4 +71,13 @@ test('cheapestNm finds the cheapest in-stock NM non-foil copy across editions', 
   assert.deepEqual(r['Big Mythic'], { usd: 64.99, url: 'https://www.cardkingdom.com/mtg/reality-fracture/big-mythic' });
   assert.equal(r['Card A'], null, 'Card A has no NM stock');
   assert.equal(r['Missing Card'], null);
+});
+
+test('converted prices add 10% tax and S$0.40 shipping', () => {
+  const ck = require('../src/cardkingdom');
+  assert.equal(ck.landedSgd(10, 1.3), 14.7); // 10 x 1.30 = 13.00, + 10% = 14.30, + 0.40
+  assert.equal(ck.landedSgd(0.25, 1.3), 0.76);
+  assert.equal(ck.landedSgd(null, 1.3), null);
+  assert.equal(ck.landedSgd(10, null), null);
+  assert.deepEqual(ck.COSTS, { shippingSgd: 0.4, taxRate: 0.1 });
 });

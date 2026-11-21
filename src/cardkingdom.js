@@ -189,7 +189,20 @@ function searchUrl(name) {
   return u.toString();
 }
 
-const sgd = (usd, rate) => (rate && usd != null ? Math.round(usd * rate * 100) / 100 : null);
+/** Added to every US price converted to S$: shipping per card (S$) and tax on the converted price. */
+const SHIPPING_SGD = 0.4;
+const TAX_RATE = 0.1;
+
+/**
+ * A US price in S$ as it would cost here: converted at the day's rate, plus 10% tax,
+ * plus S$0.40 shipping. Null when the rate or price is unknown.
+ */
+function landedSgd(usd, rate) {
+  if (!rate || usd == null || Number.isNaN(Number(usd))) return null;
+  return Math.round((Number(usd) * rate * (1 + TAX_RATE) + SHIPPING_SGD) * 100) / 100;
+}
+const sgd = landedSgd;
+const COSTS = { shippingSgd: SHIPPING_SGD, taxRate: TAX_RATE };
 
 /** Card Kingdom's retail prices for every version of a card: in stock first, cheapest first. */
 async function sellPrices(cardName) {
@@ -232,6 +245,7 @@ async function sellPrices(cardName) {
     searchUrl: searchUrl(cardName),
     priceListDate: meta.createdAt,
     usdSgd: rate,
+    costs: COSTS,
     usdSgdDate: fxr.date,
   };
 }
@@ -330,4 +344,4 @@ async function cheapestNm(names) {
   return out;
 }
 
-module.exports = { sellPrices, ensureLoaded, usdToSgd, topInEdition, editionCards, priceListDate, cheapestNm, _createRecordScanner: createRecordScanner, _slim: slim };
+module.exports = { sellPrices, ensureLoaded, usdToSgd, topInEdition, editionCards, priceListDate, cheapestNm, landedSgd, COSTS, _createRecordScanner: createRecordScanner, _slim: slim };

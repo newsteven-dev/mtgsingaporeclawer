@@ -293,7 +293,7 @@
 
     const rate = d.usdSgd ? `Converted at US$1 = S$${Number(d.usdSgd).toFixed(4)}${d.usdSgdDate && d.usdSgdDate !== 'fixed' ? ` (${d.usdSgdDate})` : ''}. ` : '';
     $('#ck-note').innerHTML = `Card Kingdom grades cards NM, EX, VG and G, roughly the same as NM, LP, MP and HP at the Singapore stores.
-      Prices don't include shipping from the US. ${rate}
+      S$ prices include 10% tax and S$0.40 shipping per card. ${rate}
       ${d.priceListDate ? `Card Kingdom price list from ${esc(d.priceListDate)} (US Eastern). ` : ''}
       <a href="${esc(d.searchUrl)}" target="_blank" rel="noopener">Search Card Kingdom ↗</a>`;
   }
@@ -798,7 +798,7 @@
           </section>`,
         )
         .join('');
-      const perUsd = d.usdSgd ? `, about S$${Number(d.usdSgd).toFixed(2)} per US$1` : '';
+      const perUsd = `, converted at ${d.usdSgd ? `about S$${Number(d.usdSgd).toFixed(2)} per US$1` : 'the day’s rate'} plus 10% tax and S$0.40 shipping per card`;
       $('#latest-note').textContent =
         rank === 'ck'
           ? `Card Kingdom: each set's regular printings (non-foil, no special versions) by Card Kingdom's Near Mint price in USD${perUsd}. Click a card to compare it in Singapore.`
@@ -851,7 +851,7 @@
       const d = await res.json();
       if (!res.ok || !(d.cards || []).length) return;
       $('#most-played-list').innerHTML = d.cards.map(mostPlayedCard).join('');
-      const perUsd = d.usdSgd ? ` (about S$${Number(d.usdSgd).toFixed(2)} per US$1)` : '';
+      const perUsd = ` (S$ prices: converted at ${d.usdSgd ? `about S$${Number(d.usdSgd).toFixed(2)} per US$1` : 'the day’s rate'}, plus 10% tax and S$0.40 shipping per card)`;
       $('#most-played-note').textContent =
         `The cards in the most Commander decks, basic lands left out. Popularity: EDHREC rank via Scryfall. ` +
         `"From" is the cheapest printing's TCGplayer market price; Card Kingdom is its cheapest in-stock Near Mint copy${perUsd}. ` +

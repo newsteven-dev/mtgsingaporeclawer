@@ -81,8 +81,11 @@ of are hidden by default.
 - Prices come from Card Kingdom's public daily price list (`api.cardkingdom.com/api/v2/pricelist`, about 68 MB).
   The server streams it once, keeps a slim copy in memory (about 220 MB of RAM), and refreshes it every 6 hours.
   The first Card Kingdom lookup after the server starts takes a few seconds.
-- USD prices are converted to SGD with the daily rate from [Frankfurter](https://frankfurter.dev).
-  Set `USD_SGD_RATE` to use a fixed rate instead. Prices don't include shipping from the US.
+- USD prices (Card Kingdom and TCGplayer) are shown in S$ as they would cost here: converted with the daily
+  rate from [Frankfurter](https://frankfurter.dev), plus 10% tax, plus S$0.40 shipping per card
+  (S$ = US$ x rate x 1.10 + 0.40). Set `USD_SGD_RATE` to use a fixed rate instead. The tax and shipping are
+  set in `src/cardkingdom.js` (`TAX_RATE`, `SHIPPING_SGD`). The price movers report compares Singapore
+  listings with these S$ prices.
 
 ## Price history (Supabase)
 

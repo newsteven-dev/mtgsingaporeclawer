@@ -46,7 +46,7 @@ test('top 5 by price skips cards with no price and converts to SGD', async () =>
   const r = await latest.topCards('price');
   assert.equal(r.cards.length, 5);
   assert.deepEqual(r.cards.map((c) => c.name), ['Big Mythic', 'Foil Only', 'Card 0', 'Card 1', 'Card 2']);
-  assert.equal(r.cards[0].sgd, 50.34);
+  assert.equal(r.cards[0].sgd, 55.77); // 38.72 x 1.30 x 1.10 + 0.40
   assert.equal(r.cards[1].foilOnly, true);
   assert.equal(r.cards[1].image, 'f.jpg');
   assert.match(r.cards[0].tcgplayerUrl, /^https:\/\/www\.tcgplayer\.com\/search\/magic\/product\?/);
@@ -91,7 +91,7 @@ test('most played lists the top 8 Commander cards by EDHREC rank, skipping basic
   assert.equal(r.cards.length, 8);
   assert.deepEqual(
     { position: r.cards[0].position, name: r.cards[0].name, edhrecRank: r.cards[0].edhrecRank, tcgSgd: r.cards[0].tcgSgd, image: r.cards[0].image },
-    { position: 1, name: 'Land A', edhrecRank: 10, tcgSgd: 50.34, image: 's.jpg' },
+    { position: 1, name: 'Land A', edhrecRank: 10, tcgSgd: 55.77, image: 's.jpg' },
   );
   assert.equal(r.cards[0].edhrecUrl, 'https://edhrec.com/cards/land-a');
 });
